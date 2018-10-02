@@ -1,0 +1,18 @@
+Package: gformula
+Version: 0.0.0.9000
+Title: g -formula
+Description: Estimate causal effects via the parametric g-formula.
+Authors@R: person("Garrick", "Aden-Buie", email = "Garrick.Aden-Buie@moffitt.org", role = c("aut", "cre"))
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 6.1.0
+Suggests: 
+    testthat,
+    spelling
+Language: en-US
+Imports: 
+    magrittr
+URL: https://github.com/GerkeLab/gformula
+BugReports: https://github.com/GerkeLab/gformula/issues
