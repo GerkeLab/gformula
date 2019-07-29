@@ -36,6 +36,8 @@ example1 <- read_csv("example1.csv")
 
 # time 1: we will use variables measured at time 0 to predict the levels of
 # variables measured at time 1
+# Note: somewhere along the way, we need to incorporate the lag option which
+# will be variable-specific (e.g. some will have lag==2, others lag==1)
 t1 <- example1 %>% filter(time %in% c(0,1))
 
 # verify that baseage remains constant across t0 and t1
@@ -70,6 +72,17 @@ act1_fit_z <- glm(act_1 > 0 ~ baseage + hbp_0,
 act1_fit_I <- lm(log(act_1) ~ baseage + hbp_0,
                   data = t1_flat %>% filter(act_1 > 0))
 
+# fit model for competing risk (death)
+dead1_fit <- glm(dead_1 ~ baseage + hbp_0 + act_0,
+                family = "binomial",
+                data = t1_flat)
 
+# fit model for event of interest (diabetes)
+# Note: subset to those without competing event at time 1,
+# need to circle back to methods papers to ensure this is correct
+# but it seems to be from Keil, 2014 Figure 2
+dia1_fit <- glm(dia_1 ~ baseage + hbp_0 + act_0,
+                 family = "binomial",
+                 data = t1_flat %>% filter(dead_1 == 0))
 
 
