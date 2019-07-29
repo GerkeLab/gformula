@@ -20,7 +20,7 @@ options notes;
 %macro create_sample ;
 %let condition = ;
 %let condition = dia or censlost or dead ;
- 
+
 
 
 
@@ -49,22 +49,22 @@ options notes;
             do j=3 to 8  until ( &condition   ) ;
                 id=i;
                 time=j-3;
-                
+
 
                 hbp     = ahbp(j);
                 hbp_l1  = ahbp(j-1);
                 hbp_l2  = ahbp(j-2);
-                
+
 
                 act     = aact(j);
                 act_l1  = aact(j-1);
                 act_l2  = aact(j-2);
-                
+
 
               dia = ( (j/500) >rand('uniform'));
                 censlost  = (0.05>rand('uniform'));
                 dead      = (0.05>rand('uniform'));
-               
+
 
 
 
@@ -80,7 +80,7 @@ options notes;
 
 
 data sample;
-set sample; 
+set sample;
 if censlost=1 then do;
        dia= .;
        dead= .;
@@ -97,7 +97,12 @@ run;
 
 %create_sample;
 
-
+* export to csv ;
+proc export data = sample
+    outfile = "example1.csv"
+    dbms = csv
+    replace;
+run;
 
 
 **GFORMULA Call;
@@ -113,7 +118,7 @@ outctype=binsurv,
 comprisk =  dead  ,
 
 fixedcov = baseage,
-timeptype= concat, 
+timeptype= concat,
 timeknots = 1 2 3 4 5,
 
 ncov=2,

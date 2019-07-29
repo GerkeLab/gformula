@@ -1,0 +1,3573 @@
+This program ran on stetson08 /d/q1/1806464.1.linux12h.q
+1                                                      The SAS System                             12:48 Monday, July 29, 2019
+
+NOTE: Copyright (c) 2016 by SAS Institute Inc., Cary, NC, USA. 
+NOTE: SAS (r) Proprietary Software 9.4 (TS1M5) 
+      Licensed to CHANNING DIVISION OF NETWORK MEDICINE - T&R, Site 70123069.
+NOTE: This session is executing on the Linux 2.6.32-754.11.1.el6.x86_64 (LIN X64) platform.
+
+
+
+NOTE: Updated analytical products:
+      
+      SAS/STAT 14.3
+      SAS/ETS 14.3
+      SAS/OR 14.3
+      SAS/IML 14.3
+      SAS/QC 14.3
+
+NOTE: Additional host information:
+
+ Linux LIN X64 2.6.32-754.11.1.el6.x86_64 #1 SMP Tue Feb 26 15:38:56 UTC 2019 x86_64 CentOS release 6.10 (Final) 
+
+You are running SAS 9. Some SAS 8 files will be automatically converted 
+by the V9 engine; others are incompatible.  Please see 
+http://support.sas.com/rnd/migration/planning/platform/64bit.html
+
+PROC MIGRATE will preserve current SAS file attributes and is 
+recommended for converting all your SAS libraries from any 
+SAS 8 release to SAS 9.  For details and examples, please see
+http://support.sas.com/rnd/migration/index.html
+
+
+This message is contained in the SAS news file, and is presented upon
+initialization.  Edit the file "news" in the "misc/base" directory to
+display site-specific news and information in the program log.
+The command line option "-nonews" will prevent this display.
+
+
+
+
+NOTE: SAS initialization used:
+      real time           0.18 seconds
+      cpu time            0.04 seconds
+      
+1          /*Example: outctype=binsurv*/
+2          
+3          %include 'gformula3.sas';
+7508       options linesize=88 pagesize=54;
+7509       
+7510       *options mprint mprintnest;
+7511       *options mlogic mlogicnest;
+7512       *options fullstimer notes;
+7513       options notes;
+7514       *options threads;
+7515       
+2                                    The SAS System          12:48 Monday, July 29, 2019
+
+7516       
+7517       
+7518       %let interv1 = intno=1 ,  nintvar=1,
+7519           intlabel='All subjects exercise at least 30 minutes per day in all
+7519     ! intervals',
+7520           intvar1 = act, inttype1 = 2, intmin1=30, intpr1=1, inttimes1 = 0 1 2 3 4
+7520     ! 5 ;
+7521       
+7522       
+7523       
+7524       %macro create_sample ;
+7525       %let condition = ;
+7526       %let condition = dia or censlost or dead ;
+7527       
+7528       
+7529       
+7530       
+7531       
+7532       **SAMPLE Data;
+7533           data sample(drop = i j ahbp1-ahbp8 aact1-aact8);
+7534       
+7535               call streaminit(5027);
+7536       
+7537               do i=1 to 1000;
+7538                   baseage = int( 35 + 25*rand('uniform'));
+7539       
+7540                   array ahbp(8);
+7541                   array aact(8);
+7542       
+7543                   do j=1 to 8;
+7544                       ahbp(j) = (0.2>rand('uniform'));
+7545                       if j > 1 & ahbp(j-1) = 1 then ahbp(j) = 1 ;
+7546       
+7547               aact(j)=(0.7>rand('uniform'));
+7548               if aact(j)=1 then do;
+7549                          aact(j) = int(exp(3.5+0.4*(rand('normal'))));
+7550               end;
+7551                       end;
+7552       
+7553                   do j=3 to 8  until ( &condition   ) ;
+7554                       id=i;
+7555                       time=j-3;
+7556       
+7557       
+7558                       hbp     = ahbp(j);
+7559                       hbp_l1  = ahbp(j-1);
+7560                       hbp_l2  = ahbp(j-2);
+7561       
+7562       
+7563                       act     = aact(j);
+7564                       act_l1  = aact(j-1);
+7565                       act_l2  = aact(j-2);
+3                                    The SAS System          12:48 Monday, July 29, 2019
+
+7566       
+7567       
+7568                     dia = ( (j/500) >rand('uniform'));
+7569                       censlost  = (0.05>rand('uniform'));
+7570                       dead      = (0.05>rand('uniform'));
+7571       
+7572       
+7573       
+7574       
+7575                       output;
+7576       
+7577                       end;
+7578                  end;
+7579       
+7580       
+7581       
+7582       
+7583           run;
+7584       
+7585       
+7586       data sample;
+7587       set sample;
+7588       if censlost=1 then do;
+7589              dia= .;
+7590              dead= .;
+7591       end;
+7592       else do;
+7593          if dead=1 then dia= .;
+7594       end;
+7595       run;
+7596       
+7597       proc means data=sample;
+7598       title 'Means of SAMPLE data';
+7599       run;
+7600       %mend ;
+7601       
+7602       %create_sample;
+
+NOTE: The data set WORK.SAMPLE has 4741 observations and 12 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.02 seconds
+      
+
+
+NOTE: There were 4741 observations read from the data set WORK.SAMPLE.
+NOTE: The data set WORK.SAMPLE has 4741 observations and 12 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.05 seconds
+      cpu time            0.00 seconds
+      
+
+4                                    The SAS System          12:48 Monday, July 29, 2019
+
+
+NOTE: There were 4741 observations read from the data set WORK.SAMPLE.
+NOTE: The PROCEDURE MEANS printed page 1.
+NOTE: PROCEDURE MEANS used (Total process time):
+      real time           0.08 seconds
+      cpu time            0.05 seconds
+      
+
+7603       
+7604       * export to csv ;
+7605       proc export data = sample
+7606           outfile = "example1.csv"
+7607           dbms = csv
+7608           replace;
+7609       run;
+
+7610        /**********************************************************************
+7611        *   PRODUCT:   SAS
+7612        *   VERSION:   9.4
+7613        *   CREATOR:   External File Interface
+7614        *   DATE:      29JUL19
+7615        *   DESC:      Generated SAS Datastep Code
+7616        *   TEMPLATE SOURCE:  (None Specified.)
+7617        ***********************************************************************/
+7618           data _null_;
+7619           %let _EFIERR_ = 0; /* set the ERROR detection macro variable */
+7620           %let _EFIREC_ = 0;     /* clear export record count macro variable */
+7621           file 'example1.csv' delimiter=',' DSD DROPOVER lrecl=32767;
+7622           if _n_ = 1 then        /* write column names or labels */
+7623            do;
+7624              put
+7625                 "baseage"
+7626              ','
+7627                 "censlost"
+7628              ','
+7629                 "dia"
+7630              ','
+7631                 "dead"
+7632              ','
+7633                 "id"
+7634              ','
+7635                 "time"
+7636              ','
+7637                 "hbp"
+7638              ','
+7639                 "hbp_l1"
+7640              ','
+7641                 "hbp_l2"
+7642              ','
+7643                 "act"
+7644              ','
+7645                 "act_l1"
+5                                    The SAS System          12:48 Monday, July 29, 2019
+
+7646              ','
+7647                 "act_l2"
+7648              ;
+7649            end;
+7650          set  SAMPLE   end=EFIEOD;
+7651              format baseage best12. ;
+7652              format censlost best12. ;
+7653              format dia best12. ;
+7654              format dead best12. ;
+7655              format id best12. ;
+7656              format time best12. ;
+7657              format hbp best12. ;
+7658              format hbp_l1 best12. ;
+7659              format hbp_l2 best12. ;
+7660              format act best12. ;
+7661              format act_l1 best12. ;
+7662              format act_l2 best12. ;
+7663            do;
+7664              EFIOUT + 1;
+7665              put baseage @;
+7666              put censlost @;
+7667              put dia @;
+7668              put dead @;
+7669              put id @;
+7670              put time @;
+7671              put hbp @;
+7672              put hbp_l1 @;
+7673              put hbp_l2 @;
+7674              put act @;
+7675              put act_l1 @;
+7676              put act_l2 ;
+7677              ;
+7678            end;
+7679           if _ERROR_ then call symputx('_EFIERR_',1);  /* set ERROR detection macro
+7679     !  variable */
+7680           if EFIEOD then call symputx('_EFIREC_',EFIOUT);
+7681           run;
+
+NOTE: The file 'example1.csv' is:
+      Filename=/udd/hptrg/gformula/gformula-052919/example1.csv,
+      Owner Name=hptrg,Group Name=hp,
+      Access Permission=-rw-r--r--,
+      Last Modified=29Jul2019:12:48:20
+
+NOTE: 4742 records were written to the file 'example1.csv'.
+      The minimum record length was 23.
+      The maximum record length was 69.
+NOTE: There were 4741 observations read from the data set WORK.SAMPLE.
+NOTE: DATA statement used (Total process time):
+      real time           0.02 seconds
+      cpu time            0.02 seconds
+      
+6                                    The SAS System          12:48 Monday, July 29, 2019
+
+
+4741 records created in example1.csv from SAMPLE.
+  
+  
+NOTE: "example1.csv" file was successfully created.
+NOTE: PROCEDURE EXPORT used (Total process time):
+      real time           2.26 seconds
+      cpu time            0.14 seconds
+      
+
+7682       
+7683       
+7684       **GFORMULA Call;
+7685       title 'GFORMULA SAMPLE';
+7686       options mprint notes ;
+7687       %gformula(
+7688       data= sample,
+7689       id=id,
+7690       time=time,
+7691       timepoints = 6,
+7692       outc=dia,
+7693       outctype=binsurv,
+7694       comprisk =  dead  ,
+7695       
+7696       fixedcov = baseage,
+7697       timeptype= concat,
+7698       timeknots = 1 2 3 4 5,
+7699       
+7700       ncov=2,
+7701       cov1  = hbp,    cov1otype  = 2, cov1ptype = tsswitch1,
+7702       cov2  = act,    cov2otype  = 4, cov2ptype = lag2cub,
+7703       
+7704       hazardratio = 1 ,
+7705       intcomp = 0 1 ,
+7706       seed= 9458, nsamples = 0, numint=1
+7707       );
+MPRINT(GFORMULA):   ;
+covlist = hbp act
+MPRINT(GFORMULA):   ;
+
+MPRINT(GFORMULA):  ;
+seed = 9458 , seedlist = 9458
+Number of categories of time : cov0lev=6
+MPRINT(DATAPREP):   data _null_(drop=);
+MPRINT(DATAPREP):   set sample;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 4741 observations read from the data set WORK.SAMPLE.
+7                                    The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: DATA statement used (Total process time):
+      real time           0.05 seconds
+      cpu time            0.02 seconds
+      
+
+Outcome predictors are: baseage time_1                           time_2                 
+          time_3                           time_4                           time_5      
+                      hbp tshbp_inter tshbp_inter_spl1   tshbp_inter_spl2               
+            act_l1 act acts_l1 acts actc_l1 actc
+Censoring by death predictors are: baseage time_1                           time_2      
+                     time_3                           time_4                           
+time_5                            hbp tshbp_inter tshbp_inter_spl1   tshbp_inter_spl2   
+                        act_l1 act acts_l1 acts actc_l1 actc
+cov0ninterx=0
+cov1ninterx=0
+cov1 (hbp) predictors are: baseage time_1                           time_2              
+             time_3                           time_4                           time_5   
+                        act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1
+
+cov2ninterx=0
+cov2 (act) predictors are: baseage time_1                           time_2              
+             time_3                           time_4                           time_5   
+                                hbp tshbp_inter  tshbp_inter_spl1 tshbp_inter_spl2      
+                     act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1
+
+MPRINT(OBSCUMINC):   proc sql noprint ;
+MPRINT(OBSCUMINC):   create table summed as select time , mean(dia) as proboutc , 
+mean(dead) as probcomprisk from sample(keep = time dia dead ) group by time order by 
+time ;
+NOTE: Table WORK.SUMMED created, with 6 rows and 3 columns.
+
+MPRINT(OBSCUMINC):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.40 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(OBSCUMINC):   data cuminc;
+MPRINT(OBSCUMINC):   set summed;
+MPRINT(OBSCUMINC):   keep cuminc;
+MPRINT(OBSCUMINC):   by time;
+MPRINT(OBSCUMINC):   retain cumsurv 1 cuminc 0;
+MPRINT(OBSCUMINC):   inc = cumsurv * proboutc * (1.0 - probcomprisk) ;
+MPRINT(OBSCUMINC):   cuminc = cuminc + inc;
+MPRINT(OBSCUMINC):   surv = (1.0 - proboutc) * (1.0 - probcomprisk) ;
+MPRINT(OBSCUMINC):   cumsurv = cumsurv * surv;
+MPRINT(OBSCUMINC):   if _N_ = 6 then output;
+MPRINT(OBSCUMINC):   run;
+
+NOTE: There were 6 observations read from the data set WORK.SUMMED.
+NOTE: The data set WORK.CUMINC has 1 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+8                                    The SAS System          12:48 Monday, July 29, 2019
+
+      real time           0.06 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(OBSCUMINC):   proc datasets library=work nolist;
+MPRINT(OBSCUMINC):   delete summed;
+MPRINT(OBSCUMINC):   run;
+NOTE: Deleting WORK.SUMMED (memtype=DATA).
+MPRINT(DATAPREP):  ;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.05 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(DATAPREP):   proc sort data=sample nodupkey out=indiv;
+MPRINT(DATAPREP):   by id;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 4741 observations read from the data set WORK.SAMPLE.
+NOTE: 3741 observations with duplicate key values were deleted.
+NOTE: The data set WORK.INDIV has 1000 observations and 12 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.19 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(DATAPREP):   data _orig_ (keep= _sample_ newid id);
+MPRINT(DATAPREP):   merge indiv cuminc end=_end_;
+MPRINT(DATAPREP):   newid=_n_;
+MPRINT(DATAPREP):   _sample_=0;
+MPRINT(DATAPREP):   if _n_=1 then do;
+MPRINT(DATAPREP):   array aoutc baseage time_1 time_2 time_3 time_4 time_5 hbp 
+tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc;
+MPRINT(DATAPREP):   dimoutc=dim(aoutc);
+MPRINT(DATAPREP):   call symput('dimoutc',trim(left(put(dimoutc,8.))) );
+MPRINT(DATAPREP):   array acomprisk baseage time_1 time_2 time_3 time_4 time_5 hbp 
+tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc;
+MPRINT(DATAPREP):   dimcomprisk=dim(acomprisk);
+MPRINT(DATAPREP):   call symput('dimcomprisk',trim(left(put(dimcomprisk,8.))) );
+MPRINT(DATAPREP):   array avar0 time_1 time_2 time_3 time_4 time_5 hbp_l1 
+tshbp_l1_inter tshbp_l1_inter_spl1 tshbp_l1_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 
+actc_l2 actc_l1;
+MPRINT(DATAPREP):   dimvar0 = dim(avar0);
+MPRINT(DATAPREP):   call symput('dimvar'||(left(put(0,8.))),trim(left(put(dimvar0,8.))) 
+);
+MPRINT(DATAPREP):   array avar1 baseage time_1 time_2 time_3 time_4 time_5 act_l2 
+act_l1 acts_l2 acts_l1 actc_l2 actc_l1;
+MPRINT(DATAPREP):   dimvar1 = dim(avar1);
+MPRINT(DATAPREP):   call symput('dimvar'||(left(put(1,8.))),trim(left(put(dimvar1,8.))) 
+);
+MPRINT(DATAPREP):   array avar2 baseage time_1 time_2 time_3 time_4 time_5 hbp 
+9                                    The SAS System          12:48 Monday, July 29, 2019
+
+tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 
+actc_l1;
+MPRINT(DATAPREP):   dimvar2 = dim(avar2);
+MPRINT(DATAPREP):   call symput('dimvar'||(left(put(2,8.))),trim(left(put(dimvar2,8.))) 
+);
+MPRINT(DATAPREP):   call symput('obsp',trim(left(cuminc)));
+MPRINT(DATAPREP):   end;
+MPRINT(DATAPREP):   if _end_ then do;
+MPRINT(DATAPREP):   call symput('ssize',trim(left(newid)));
+MPRINT(DATAPREP):   end;
+MPRINT(DATAPREP):   run;
+
+NOTE: Numeric values have been converted to character values at the places given by: 
+      (Line):(Column).
+      7707:68    7707:180   
+NOTE: There were 1000 observations read from the data set WORK.INDIV.
+NOTE: There were 1 observations read from the data set WORK.CUMINC.
+NOTE: The data set WORK._ORIG_ has 1000 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.11 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(DATAPREP):   proc sort data=_orig_;
+MPRINT(DATAPREP):   by id;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 1000 observations read from the data set WORK._ORIG_.
+NOTE: The data set WORK._ORIG_ has 1000 observations and 3 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(DATAPREP):   proc sort data=sample out=_inputd_;
+MPRINT(DATAPREP):   by id descending time;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 4741 observations read from the data set WORK.SAMPLE.
+NOTE: The data set WORK._INPUTD_ has 4741 observations and 12 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.31 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(DATAPREP):   data _inputd_;
+MPRINT(DATAPREP):   merge _orig_ _inputd_;
+MPRINT(DATAPREP):   by id;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 1000 observations read from the data set WORK._ORIG_.
+10                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: There were 4741 observations read from the data set WORK._INPUTD_.
+NOTE: The data set WORK._INPUTD_ has 4741 observations and 14 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.20 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(DATAPREP):   proc sort data = _inputd_ ;
+MPRINT(DATAPREP):   by newid time;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 4741 observations read from the data set WORK._INPUTD_.
+NOTE: The data set WORK._INPUTD_ has 4741 observations and 14 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.25 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(DATAPREP):   data _covbounds_;
+MPRINT(DATAPREP):   set _inputd_ end=_end_;
+MPRINT(DATAPREP):   retain act_min act_max;
+MPRINT(DATAPREP):   if _n_ = 1 then do;
+MPRINT(DATAPREP):   act_min = 1.0e100;
+MPRINT(DATAPREP):   act_max = -1.0e100;
+MPRINT(DATAPREP):   end;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):   if act > 0 and act < act_min then act_min = act;
+MPRINT(DATAPREP):   if act ne . and act > act_max then act_max = act;
+MPRINT(DATAPREP):   if _end_ then do;
+MPRINT(DATAPREP):   call symput("cov2min", trim(left(act_min)));
+MPRINT(DATAPREP):   call symput("cov2max", trim(left(act_max)));
+MPRINT(DATAPREP):   end;
+MPRINT(DATAPREP):   _sample_ = 0 ;
+MPRINT(DATAPREP):   keep _sample_ act_min act_max ;
+MPRINT(DATAPREP):   if _end_ then output ;
+MPRINT(DATAPREP):   run;
+
+NOTE: Numeric values have been converted to character values at the places given by: 
+      (Line):(Column).
+      7707:1   7707:1   
+NOTE: There were 4741 observations read from the data set WORK._INPUTD_.
+NOTE: The data set WORK._COVBOUNDS_ has 1 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.01 seconds
+      
+
+act range is 8 to 116
+MPRINT(DATAPREP):   data _inputd_;
+MPRINT(DATAPREP):   set _inputd_ ;
+MPRINT(DATAPREP):   by newid time;
+MPRINT(DATAPREP):   time_l1 = time-1;
+11                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(DATAPREP):   time_l2 = time-2;
+MPRINT(DATAPREP):   time_l3 = time-3;
+MPRINT(DATAPREP):   retain _ind2 _ind3 _ind4 ;
+MPRINT(DATAPREP):   if first.newid then do ;
+MPRINT(DATAPREP):   _ind2 = 0 ;
+MPRINT(DATAPREP):   _ind3 = 0 ;
+MPRINT(DATAPREP):   _ind4 = 0 ;
+MPRINT(DATAPREP):   end;
+MPRINT(DATAPREP):   if time = 2 then _ind2 = 1 ;
+MPRINT(DATAPREP):   if time = 3 then _ind3 = 1 ;
+MPRINT(DATAPREP):   if time = 4 then _ind4 = 1 ;
+MPRINT(DATAPREP):   retain time_b ;
+MPRINT(DATAPREP):   time_l1 = time - 1 ;
+MPRINT(DATAPREP):   time_l2 = time - 2 ;
+MPRINT(DATAPREP):   time_l3 = time - 3 ;
+MPRINT(DATAPREP):   if time = 0 then time_b = time ;
+MPRINT(MAKECAT):   if time = . then timegr = .;
+MPRINT(MAKECAT):   else if time < 1 then timegr = 1;
+MPRINT(MAKECAT):   else if time < 2 then timegr = 2;
+MPRINT(MAKECAT):   else if time < 3 then timegr = 3;
+MPRINT(MAKECAT):   else if time < 4 then timegr = 4;
+MPRINT(MAKECAT):   else if time < 5 then timegr = 5;
+MPRINT(MAKECAT):   else timegr = 6;
+MPRINT(MAKECAT):   time_1 = (timegr = 1);
+MPRINT(MAKECAT):   time_2 = (timegr = 2);
+MPRINT(MAKECAT):   time_3 = (timegr = 3);
+MPRINT(MAKECAT):   time_4 = (timegr = 4);
+MPRINT(MAKECAT):   time_5 = (timegr = 5);
+MPRINT(MAKECAT):   drop timegr;
+MPRINT(GENPRED):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):   retain hbp_b ;
+MPRINT(DATAPREP):   if time = 0 then hbp_b = hbp ;
+MPRINT(GENPRED):   retain tshbp_inter ;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   if time = 0 then do;
+MPRINT(GENPRED):   tshbp_inter = 0 ;
+MPRINT(GENPRED):   tshbp_l1_inter = 0 ;
+MPRINT(GENPRED):   end;
+MPRINT(GENPRED):   tshbp_l1_inter = tshbp_inter ;
+MPRINT(GENPRED):   tshbp_inter = tshbp_l1_inter + hbp ;
+MPRINT(GENPRED):   *sumtemp&i = sumtemp&i + &&cov&i;
+MPRINT(GENPRED):   *sumtemp_l1&i = sumtemp_l1&i + &&cov&i.._l1;
+MPRINT(GENPRED):   *ts&&cov&i.._inter = &&cov&i*sumtemp&i;
+MPRINT(GENPRED):   *ts&&cov&i.._l1_inter = &&cov&i.._l1*sumtemp_l1&i;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):   retain act_b ;
+MPRINT(DATAPREP):   if time = 0 then act_b = act ;
+MPRINT(GENPRED):   acts = act*act;
+MPRINT(GENPRED):   acts_l1 = act_l1*act_l1;
+MPRINT(GENPRED):   acts_l2 = act_l2*act_l2;
+MPRINT(GENPRED):   actc = act*act*act;
+12                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(GENPRED):   actc_l1 = act_l1*act_l1*act_l1;
+MPRINT(GENPRED):   actc_l2 = act_l2*act_l2*act_l2;
+MPRINT(GENPRED):   zact = (act ne 0);
+MPRINT(GENPRED):   if zact = 1 then lact = log(act);
+MPRINT(GENPRED):   zact_l1 = (act_l1 ne 0);
+MPRINT(GENPRED):   if zact_l1 = 1 then lact_l1 = log(act_l1);
+MPRINT(GENPRED):   zact_l2 = (act_l2 ne 0);
+MPRINT(GENPRED):   if zact_l2 = 1 then lact_l2 = log(act_l2);
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):   _weight_ = 1.0 ;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 4741 observations read from the data set WORK._INPUTD_.
+NOTE: The data set WORK._INPUTD_ has 4741 observations and 43 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.11 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(DATAPREP):   proc univariate data = _inputd_ (where = (hbp = 1)) noprint ;
+MPRINT(DATAPREP):   var tshbp_inter ;
+MPRINT(DATAPREP):   output out = tsscov_pct (keep = tsscov_pct5 tsscov_pct25 
+tsscov_pct75 tsscov_pct95 ) pctlpre = tsscov pctlname = _pct5 _pct25 _pct75 _pct95 
+pctlpts = 5 25 75 95;
+MPRINT(DATAPREP):   run;
+
+NOTE: The data set WORK.TSSCOV_PCT has 1 observations and 4 variables.
+NOTE: PROCEDURE UNIVARIATE used (Total process time):
+      real time           0.12 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(DATAPREP):   proc transpose data = tsscov_pct out = ttsscov_pct (keep = col1);
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TSSCOV_PCT.
+NOTE: The data set WORK.TTSSCOV_PCT has 4 observations and 1 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(DATAPREP):   proc sql noprint ;
+MPRINT(DATAPREP):   select col1 into : cov1knots separated by ' ' from ttsscov_pct ;
+MPRINT(DATAPREP):   quit ;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+knots for hbp_inter  = 1 2 4 6
+MPRINT(DATAPREP):   proc datasets library = work nolist ;
+13                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(DATAPREP):   delete tsscov_pct ttsscov_pct ;
+MPRINT(DATAPREP):   quit;
+
+NOTE: Deleting WORK.TSSCOV_PCT (memtype=DATA).
+NOTE: Deleting WORK.TTSSCOV_PCT (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(DATAPREP):   data _inputd_;
+MPRINT(DATAPREP):   set _inputd_;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl1=max((tshbp_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-1)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl2=max((tshbp_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-2)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_l1_inter_spl1=max((tshbp_l1_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_l1_inter-6)/_kd_
+,0)**3 -(6-1)*max((tshbp_l1_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_l1_inter_spl2=max((tshbp_l1_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_l1_inter-6)/_kd_
+,0)**3 -(6-2)*max((tshbp_l1_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):  ;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 4741 observations read from the data set WORK._INPUTD_.
+NOTE: The data set WORK._INPUTD_ has 4741 observations and 47 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.12 seconds
+      cpu time            0.03 seconds
+      
+
+MPRINT(DATAPREP):   data _paramdata_;
+MPRINT(DATAPREP):   set _inputd_;
+MPRINT(DATAPREP):   keep _sample_ newid _weight_ dia baseage time_1 time_2 time_3 
+time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l1 act acts_l1 acts 
+actc_l1 actc dead baseage time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter 
+14                                   The SAS System          12:48 Monday, July 29, 2019
+
+tshbp_inter_spl1 tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc time time time_1 
+time_2 time_3 time_4 time_5 hbp_l1 tshbp_l1_inter tshbp_l1_inter_spl1 
+tshbp_l1_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1 hbp baseage time_1 
+time_2 time_3 time_4 time_5 act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1 hbp_l1 act 
+baseage time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1 zact lact ;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 4741 observations read from the data set WORK._INPUTD_.
+NOTE: The data set WORK._PARAMDATA_ has 4741 observations and 31 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(DATAPREP):   data _simuldata_ ;
+MPRINT(DATAPREP):   set _inputd_ (where = (time = 0) keep= newid time baseage hbp 
+hbp_l1 hbp_b act act_l2 act_l1 act_b ) ;
+MPRINT(DATAPREP):   run;
+
+NOTE: There were 1000 observations read from the data set WORK._INPUTD_.
+      WHERE time=0;
+NOTE: The data set WORK._SIMULDATA_ has 1000 observations and 10 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(DATAPREP):   data tmpids ;
+MPRINT(DATAPREP):   do newid = 1 to 1000 ;
+MPRINT(DATAPREP):   output;
+MPRINT(DATAPREP):   end;
+MPRINT(DATAPREP):   run;
+
+NOTE: The data set WORK.TMPIDS has 1000 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(DATAPREP):   data _calchazard_ ;
+MPRINT(DATAPREP):   calchazard = 0 ;
+MPRINT(DATAPREP):   run;
+NOTE: The data set WORK._CALCHAZARD_ has 1 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(DATAPREP):   proc datasets library=work nolist;
+MPRINT(DATAPREP):   delete cuminc indiv _orig_ ;
+MPRINT(DATAPREP):   quit;
+15                                   The SAS System          12:48 Monday, July 29, 2019
+
+
+NOTE: Deleting WORK.CUMINC (memtype=DATA).
+NOTE: Deleting WORK.INDIV (memtype=DATA).
+NOTE: Deleting WORK._ORIG_ (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(GFORMULA):  ;
+before sample = 0 seed = 9458
+
+MPRINT(SAMPLES):   data param;
+MPRINT(SAMPLES):   set _paramdata_;
+MPRINT(SAMPLES):   _sample_ = 0;
+MPRINT(SAMPLES):   run;
+
+NOTE: There were 4741 observations read from the data set WORK._PARAMDATA_.
+NOTE: The data set WORK.PARAM has 4741 observations and 31 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.11 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(SAMPLES):   * _simuldata_ contains baseline variables ;
+MPRINT(SAMPLES):   data simul;
+MPRINT(SAMPLES):   set _simuldata_;
+MPRINT(SAMPLES):   _sample_ = 0;
+MPRINT(SAMPLES):   run;
+
+NOTE: There were 1000 observations read from the data set WORK._SIMULDATA_.
+NOTE: The data set WORK.SIMUL has 1000 observations and 11 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.08 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(GFORMULA):  ;
+MPRINT(GFORMULA):   options nolabel;
+
+Estimating parameters from bootstrap sample 0
+MPRINT(PARAMETERS):   sasfile param open;
+NOTE: The file WORK.PARAM.DATA has been opened by the SASFILE statement.
+MPRINT(PARAMETERS):   proc logistic descending data=param outest=outc ;
+MPRINT(PARAMETERS):   ods select ModelInfo NObs ResponseProfile ConvergenceStatus 
+ParameterEstimates ;
+MPRINT(PARAMETERS):   where (1=1) model dia = baseage time_1 time_2 time_3 time_4 
+time_5 hbp tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l1 act acts_l1 acts 
+actc_l1 actc ;
+MPRINT(PARAMETERS):   weight _weight_ ;
+
+NOTE: PROC LOGISTIC is modeling the probability that dia=1.
+16                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: Convergence criterion (GCONV=1E-8) satisfied.
+NOTE: There were 4741 observations read from the data set WORK.PARAM.
+      WHERE 1 /* an obviously TRUE WHERE clause */ ;
+NOTE: The data set WORK.OUTC has 1 observations and 23 variables.
+NOTE: The PROCEDURE LOGISTIC printed pages 2-3.
+NOTE: PROCEDURE LOGISTIC used (Total process time):
+      real time           0.67 seconds
+      cpu time            0.06 seconds
+      
+
+MPRINT(PARAMETERS):   data outc;
+MPRINT(PARAMETERS):   set outc;
+MPRINT(PARAMETERS):   if _type_='PARMS';
+MPRINT(PARAMETERS):   _sample_ = 0;
+MPRINT(PARAMETERS):   array avar intercept baseage time_1 time_2 time_3 time_4 time_5 
+hbp tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc;
+MPRINT(PARAMETERS):   array abeta boutc00-boutc16;
+MPRINT(PARAMETERS):   do i=1 to dim(avar);
+MPRINT(PARAMETERS):   abeta(i)=avar(i);
+MPRINT(PARAMETERS):   end;
+MPRINT(PARAMETERS):   keep _sample_ boutc00-boutc16;
+MPRINT(PARAMETERS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.OUTC.
+NOTE: The data set WORK.OUTC has 1 observations and 18 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(PARAMETERS):   proc logistic descending data=param outest=comprisk ;
+MPRINT(PARAMETERS):   ods select ModelInfo NObs ResponseProfile ConvergenceStatus 
+ParameterEstimates ;
+MPRINT(PARAMETERS):   where (1=1) model dead = baseage time_1 time_2 time_3 time_4 
+time_5 hbp tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l1 act acts_l1 acts 
+actc_l1 actc;
+MPRINT(PARAMETERS):   run;
+
+NOTE: PROC LOGISTIC is modeling the probability that dead=1.
+NOTE: Convergence criterion (GCONV=1E-8) satisfied.
+NOTE: There were 4741 observations read from the data set WORK.PARAM.
+      WHERE 1 /* an obviously TRUE WHERE clause */ ;
+NOTE: The data set WORK.COMPRISK has 1 observations and 23 variables.
+NOTE: The PROCEDURE LOGISTIC printed pages 4-5.
+NOTE: PROCEDURE LOGISTIC used (Total process time):
+      real time           0.94 seconds
+      cpu time            0.06 seconds
+      
+
+MPRINT(PARAMETERS):   data comprisk;
+MPRINT(PARAMETERS):   set comprisk;
+MPRINT(PARAMETERS):   if _type_='PARMS';
+17                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(PARAMETERS):   _sample_ = 0;
+MPRINT(PARAMETERS):   array avar intercept baseage time_1 time_2 time_3 time_4 time_5 
+hbp tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc;
+MPRINT(PARAMETERS):   array abeta bcomprisk00-bcomprisk16;
+MPRINT(PARAMETERS):   do i=1 to dim(avar);
+MPRINT(PARAMETERS):   abeta(i)=avar(i);
+MPRINT(PARAMETERS):   end;
+MPRINT(PARAMETERS):   keep _sample_ bcomprisk00-bcomprisk16;
+MPRINT(PARAMETERS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.COMPRISK.
+NOTE: The data set WORK.COMPRISK has 1 observations and 18 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.18 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(PARAMETERS):   proc logistic descending data=param(keep = _weight_ dia dead time 
+hbp baseage time_1 time_2 time_3 time_4 time_5 act_l2 act_l1 acts_l2 acts_l1 actc_l2 
+actc_l1 hbp_l1 ) outest=hbp ;
+MPRINT(PARAMETERS):   ods select ModelInfo NObs ResponseProfile ConvergenceStatus 
+ParameterEstimates;
+MPRINT(PARAMETERS):   where time > 0 and (1=1) and hbp_l1=0 and time not in (-1) model 
+hbp = baseage time_1 time_2 time_3 time_4 time_5 act_l2 act_l1 acts_l2 acts_l1 actc_l2 
+actc_l1;
+MPRINT(PARAMETERS):   weight _weight_ ;
+MPRINT(PARAMETERS):   run;
+
+NOTE: PROC LOGISTIC is modeling the probability that hbp=1.
+NOTE: Convergence criterion (GCONV=1E-8) satisfied.
+NOTE: There were 1386 observations read from the data set WORK.PARAM.
+      WHERE (time>0) and (hbp_l1=0);
+NOTE: The data set WORK.HBP has 1 observations and 19 variables.
+NOTE: The PROCEDURE LOGISTIC printed page 6.
+NOTE: PROCEDURE LOGISTIC used (Total process time):
+      real time           0.26 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(PARAMETERS):   proc logistic descending data=param(keep = _weight_ dia dead time 
+zact baseage time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1 ) outest=zact ;
+MPRINT(PARAMETERS):   ods select ModelInfo NObs ResponseProfile ConvergenceStatus 
+ParameterEstimates ;
+MPRINT(PARAMETERS):   where time > 0 and (1=1) and time not in (-1) model zact = 
+baseage time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1;
+MPRINT(PARAMETERS):   weight _weight_ ;
+MPRINT(PARAMETERS):   run;
+
+NOTE: PROC LOGISTIC is modeling the probability that zact=1.
+NOTE: Convergence criterion (GCONV=1E-8) satisfied.
+18                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: There were 3741 observations read from the data set WORK.PARAM.
+      WHERE time>0;
+NOTE: The data set WORK.ZACT has 1 observations and 23 variables.
+NOTE: The PROCEDURE LOGISTIC printed pages 7-8.
+NOTE: PROCEDURE LOGISTIC used (Total process time):
+      real time           0.35 seconds
+      cpu time            0.04 seconds
+      
+
+MPRINT(PARAMETERS):   proc reg data=param(keep = _weight_ dia dead time zact lact 
+baseage time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1 ) outest=act ;
+MPRINT(PARAMETERS):   ods select NObs FitStatistics ParameterEstimates ;
+MPRINT(PARAMETERS):   where time > 0 and (1=1) and zact=1 and time not in (-1) ;
+MPRINT(PARAMETERS):   model lact = baseage time_1 time_2 time_3 time_4 time_5 hbp 
+tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 
+actc_l1;
+MPRINT(PARAMETERS):   weight _weight_ ;
+MPRINT(PARAMETERS):   run;
+
+MPRINT(PARAMETERS):   sasfile param close;
+NOTE: The file WORK.PARAM.DATA has been closed by the SASFILE statement.
+
+NOTE: The data set WORK.ACT has 1 observations and 22 variables.
+NOTE: The PROCEDURE REG printed page 9.
+NOTE: PROCEDURE REG used (Total process time):
+      real time           0.46 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(PARAMETERS):   data hbp;
+MPRINT(PARAMETERS):   set hbp;
+MPRINT(PARAMETERS):   if _type_='PARMS';
+MPRINT(PARAMETERS):   _sample_ = 0;
+MPRINT(PARAMETERS):   array avar intercept baseage time_1 time_2 time_3 time_4 time_5 
+act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1;
+MPRINT(PARAMETERS):   array abeta bvar1_00-bvar1_12;
+MPRINT(PARAMETERS):   do j=1 to dim(avar);
+MPRINT(PARAMETERS):   abeta(j)=avar(j);
+MPRINT(PARAMETERS):   end;
+MPRINT(PARAMETERS):   keep _sample_ bvar1_00-bvar1_12 ;
+MPRINT(PARAMETERS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.HBP.
+NOTE: The data set WORK.HBP has 1 observations and 14 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(PARAMETERS):   data zact;
+MPRINT(PARAMETERS):   set zact;
+19                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(PARAMETERS):   if _type_='PARMS';
+MPRINT(PARAMETERS):   _sample_ = 0;
+MPRINT(PARAMETERS):   array avar intercept baseage time_1 time_2 time_3 time_4 time_5 
+hbp tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 
+actc_l1;
+MPRINT(PARAMETERS):   array abeta bvar2z_00-bvar2z_16;
+MPRINT(PARAMETERS):   do j=1 to dim(avar);
+MPRINT(PARAMETERS):   abeta(j)=avar(j);
+MPRINT(PARAMETERS):   end;
+MPRINT(PARAMETERS):   keep _sample_ bvar2z_00-bvar2z_16;
+MPRINT(PARAMETERS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.ZACT.
+NOTE: The data set WORK.ZACT has 1 observations and 18 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.48 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(PARAMETERS):   data act;
+MPRINT(PARAMETERS):   set act;
+MPRINT(PARAMETERS):   if _type_='PARMS';
+MPRINT(PARAMETERS):   _sample_ = 0;
+MPRINT(PARAMETERS):   array avar intercept baseage time_1 time_2 time_3 time_4 time_5 
+hbp tshbp_inter tshbp_inter_spl1 tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 
+actc_l1;
+MPRINT(PARAMETERS):   array abeta bvar2_00-bvar2_16;
+MPRINT(PARAMETERS):   do j=1 to dim(avar);
+MPRINT(PARAMETERS):   abeta(j)=avar(j);
+MPRINT(PARAMETERS):   end;
+MPRINT(PARAMETERS):   seact=_rmse_;
+MPRINT(PARAMETERS):   keep _sample_ bvar2_00-bvar2_16 seact;
+MPRINT(PARAMETERS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.ACT.
+NOTE: The data set WORK.ACT has 1 observations and 19 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(PARAMETERS):   data act;
+MPRINT(PARAMETERS):   merge act zact;
+MPRINT(PARAMETERS):   by _sample_;
+MPRINT(PARAMETERS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.ACT.
+NOTE: There were 1 observations read from the data set WORK.ZACT.
+NOTE: The data set WORK.ACT has 1 observations and 36 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+20                                   The SAS System          12:48 Monday, July 29, 2019
+
+      
+
+MPRINT(PARAMETERS):   data samplebetas;
+MPRINT(PARAMETERS):   merge outc comprisk hbp act ;
+MPRINT(PARAMETERS):   by _sample_;
+MPRINT(PARAMETERS):   _sample_ = 0;
+MPRINT(PARAMETERS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.OUTC.
+NOTE: There were 1 observations read from the data set WORK.COMPRISK.
+NOTE: There were 1 observations read from the data set WORK.HBP.
+NOTE: There were 1 observations read from the data set WORK.ACT.
+NOTE: The data set WORK.SAMPLEBETAS has 1 observations and 83 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.08 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(PARAMETERS):   proc append base=_beta_ data=samplebetas;
+MPRINT(PARAMETERS):   run;
+
+NOTE: Appending WORK.SAMPLEBETAS to WORK._BETA_.
+NOTE: BASE data set does not exist. DATA file is being copied to BASE file.
+NOTE: There were 1 observations read from the data set WORK.SAMPLEBETAS.
+NOTE: The data set WORK._BETA_ has 1 observations and 83 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.11 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(PARAMETERS):   proc sort data=_beta_;
+MPRINT(PARAMETERS):   by _sample_;
+MPRINT(PARAMETERS):   run;
+
+NOTE: There were 1 observations read from the data set WORK._BETA_.
+NOTE: The data set WORK._BETA_ has 1 observations and 83 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.01 seconds
+      
+
+
+MPRINT(PARAMETERS):   proc datasets library=work nolist;
+MPRINT(PARAMETERS):   delete samplebetas outc comprisk hbp act zact ;
+MPRINT(PARAMETERS):   quit;
+
+NOTE: Deleting WORK.SAMPLEBETAS (memtype=DATA).
+NOTE: Deleting WORK.OUTC (memtype=DATA).
+NOTE: Deleting WORK.COMPRISK (memtype=DATA).
+NOTE: Deleting WORK.HBP (memtype=DATA).
+NOTE: Deleting WORK.ACT (memtype=DATA).
+NOTE: Deleting WORK.ZACT (memtype=DATA).
+21                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.14 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(GFORMULA):  ;
+MPRINT(GFORMULA):   options LABEL ;
+MPRINT(GFORMULA):   ods select all ;
+MPRINT(GFORMULA):   data _betar_ ;
+MPRINT(GFORMULA):   set _beta_ (where = ( _sample_=0)) ;
+MPRINT(GFORMULA):   run;
+
+NOTE: There were 1 observations read from the data set WORK._BETA_.
+      WHERE _sample_=0;
+NOTE: The data set WORK._BETAR_ has 1 observations and 83 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(GFORMULA):   data _seedr_ ;
+MPRINT(GFORMULA):   _seedr_ = 9458;
+MPRINT(GFORMULA):   _sample_ = 0 ;
+MPRINT(GFORMULA):   run;
+
+NOTE: The data set WORK._SEEDR_ has 1 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.03 seconds
+      cpu time            0.00 seconds
+      
+
+Initializing intervention data view  0
+MPRINT(INTERV_INIT):   data simulated0 ( keep = intervened averinterv shbp1 shbp2 shbp3 
+shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 sact5 sact6 cuminc sdia1 cumincr1 cumsurvr1 
+cumcompriskr1 sdia2 cumincr2 cumsurvr2 cumcompriskr2 sdia3 cumincr3 cumsurvr3 
+cumcompriskr3 sdia4 cumincr4 cumsurvr4 cumcompriskr4 sdia5 cumincr5 cumsurvr5 
+cumcompriskr5 sdia6 cumincr6 cumsurvr6 cumcompriskr6 censor newtime dia ) /view = 
+simulated0 ;
+MPRINT(INTERV_INIT):   merge simul _betar_ _seedr_ _covbounds_ _calchazard_ end=_end_;
+MPRINT(INTERV_INIT):   by _sample_;
+MPRINT(INTERV_INIT):   call streaminit(_seedr_);
+MPRINT(INTERV_INIT):   drop _seedr_ ;
+MPRINT(INTERV_INIT):   dia = .;
+MPRINT(INTERV_INIT):   censor = . ;
+MPRINT(INTERV_INIT):   newtime = .;
+MPRINT(INTERV_INIT):   retain act_limit 0;
+MPRINT(INTERV_INIT):   retain totinterv 0;
+MPRINT(INTERV_INIT):   _intno_ = 0 ;
+MPRINT(INTERV_INIT):   uno=1;
+MPRINT(INTERV_INIT):   array aboutc boutc00-boutc16;
+MPRINT(INTERV_INIT):   array sdia {0:5 } ;
+MPRINT(INTERV_INIT):   array abcomprisk bcomprisk00-bcomprisk16;
+22                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(INTERV_INIT):   array scomprisk {0:5} ;
+MPRINT(INTERV_INIT):   array abhbp bvar1_00-bvar1_12;
+MPRINT(INTERV_INIT):   array abact bvar2_00-bvar2_16;
+MPRINT(INTERV_INIT):   array abzact bvar2z_00-bvar2z_16;
+MPRINT(INTERV_INIT):   array stime {0:5 } ;
+MPRINT(INTERV_INIT):   stime [0] = time ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   array ashbp uno baseage
+MPRINT(LISTPRED):   time_1 time_2 time_3 time_4 time_5 act_l2 act_l1 acts_l2 acts_l1 
+actc_l2 actc_l1
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   array shbp {0:5 } ;
+MPRINT(INTERV_INIT):   shbp [0] = hbp ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   array asact uno baseage
+MPRINT(LISTPRED):   time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   array sact {0:5 } ;
+MPRINT(INTERV_INIT):   sact [0] = act ;
+MPRINT(INTERV_INIT):   array asdia uno baseage
+MPRINT(LISTPRED):   time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   array ascomprisk uno baseage
+MPRINT(LISTPRED):   time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   array Uoutc{0:5} ;
+MPRINT(INTERV_INIT):   array Ucomprisk{0:5};
+MPRINT(INTERV_INIT):   scensl = 0;
+MPRINT(INTERV_INIT):   mygood = 1 ;
+MPRINT(INTERV_INIT):   array intervenedk{0:5} ;
+MPRINT(INTERV_INIT):   suminterv = 0;
+MPRINT(INTERV_INIT):   elig_persontime = 0;
+MPRINT(INTERV_INIT):   do time = 0 to 5 ;
+MPRINT(INTERV_INIT):   time_l1 = time - 1;
+MPRINT(INTERV_INIT):   time_l2 = time - 2 ;
+MPRINT(INTERV_INIT):   time_l3 = time - 3 ;
+MPRINT(INTERV_INIT):   _ind2 = 1;
+MPRINT(INTERV_INIT):   _ind3 = 1;
+MPRINT(INTERV_INIT):   _ind4 = 1;
+MPRINT(INTERV_INIT):   if time < 2 then _ind2 = 0 ;
+MPRINT(INTERV_INIT):   if time < 3 then _ind3 = 0 ;
+MPRINT(INTERV_INIT):   if time < 4 then _ind4 = 0 ;
+MPRINT(INTERV_INIT):   Uoutc[time] = rand('uniform');
+MPRINT(INTERV_INIT):   Ucomprisk[time] = rand('uniform');
+MPRINT(INTERV_INIT):   *running genpred for lagged valuees ;
+MPRINT(MAKECAT):   if time = . then timegr = .;
+MPRINT(MAKECAT):   else if time < 1 then timegr = 1;
+MPRINT(MAKECAT):   else if time < 2 then timegr = 2;
+23                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(MAKECAT):   else if time < 3 then timegr = 3;
+MPRINT(MAKECAT):   else if time < 4 then timegr = 4;
+MPRINT(MAKECAT):   else if time < 5 then timegr = 5;
+MPRINT(MAKECAT):   else timegr = 6;
+MPRINT(MAKECAT):   time_1 = (timegr = 1);
+MPRINT(MAKECAT):   time_2 = (timegr = 2);
+MPRINT(MAKECAT):   time_3 = (timegr = 3);
+MPRINT(MAKECAT):   time_4 = (timegr = 4);
+MPRINT(MAKECAT):   time_5 = (timegr = 5);
+MPRINT(MAKECAT):   drop timegr;
+MPRINT(GENPRED):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(GENPRED):   if time = 0 then do ;
+MPRINT(GENPRED):   tshbp_l1_inter = 0 ;
+MPRINT(GENPRED):   end;
+MPRINT(GENPRED):  ;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_l1_inter_spl1=max((tshbp_l1_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_l1_inter-6)/_kd_
+,0)**3 -(6-1)*max((tshbp_l1_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_l1_inter_spl2=max((tshbp_l1_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_l1_inter-6)/_kd_
+,0)**3 -(6-2)*max((tshbp_l1_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(GENPRED):   ;
+MPRINT(GENPRED):   acts_l1 = act_l1*act_l1;
+MPRINT(GENPRED):   acts_l2 = act_l2*act_l2;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   actc_l1 = act_l1*act_l1*act_l1;
+MPRINT(GENPRED):   actc_l2 = act_l2*act_l2*act_l2;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(SIMVAR):   Uhbp=rand('uniform');
+MPRINT(SIMVAR):   Uzact=rand('uniform');
+MPRINT(SIMVAR):   Nact = rand('normal');
+MPRINT(SIMVAR):   if not( time in (-1) ) then do;
+MPRINT(SIMVAR):   if 1 > time then do;
+MPRINT(SIMVAR):   hbp = hbp_b + 0;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   if (1=0) then do;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   mhbp = 0 ;
+MPRINT(SIMVAR):   do j=1 to dim(abhbp);
+MPRINT(SIMVAR):   mhbp =sum(mhbp ,abhbp(j)*ashbp(j));
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   if hbp =1 then hbp =1;
+24                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(SIMVAR):   if hbp =0 then do;
+MPRINT(SIMVAR):   phbp =1/(1+exp(-mhbp));
+MPRINT(SIMVAR):   if Uhbp <=phbp then hbp =1;
+MPRINT(SIMVAR):   if Uhbp >phbp >. then hbp =0;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   end ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   shbp [ time] = hbp ;
+MPRINT(SIMVAR):  ;
+MPRINT(GENPRED):   tshbp_inter = tshbp_l1_inter + hbp;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl1=max((tshbp_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-1)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl2=max((tshbp_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-2)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(SIMVAR):  ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do ;
+MPRINT(SIMVAR):   hbp = hbp_l1 ;
+MPRINT(SIMVAR):   shbp [time] = hbp ;
+MPRINT(GENPRED):   tshbp_inter = tshbp_l1_inter + hbp;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl1=max((tshbp_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-1)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl2=max((tshbp_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-2)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(SIMVAR):  ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   if not( time in (-1) ) then do;
+MPRINT(SIMVAR):   if 1 > time then do;
+MPRINT(SIMVAR):   act = act_b + 0;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   if (1=0) then do;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   mzact = 0 ;
+MPRINT(SIMVAR):   do j=1 to dim(abzact);
+MPRINT(SIMVAR):   mzact=sum(mzact,abzact(j)*asact(j));
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   pzact=1/(1+exp(-mzact));
+MPRINT(SIMVAR):   if Uzact<=pzact then zact=1;
+25                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(SIMVAR):   if Uzact>pzact>. then zact=0;
+MPRINT(SIMVAR):   if zact=0 then act=0;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   mact = 0 ;
+MPRINT(SIMVAR):   do j=1 to dim(abact);
+MPRINT(SIMVAR):   mact=sum(mact,abact(j)*asact(j));
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   act=exp(mact+Nact*seact);
+MPRINT(SIMVAR):   if act < act_min then do;
+MPRINT(SIMVAR):   act = act_min;
+MPRINT(SIMVAR):   act_limit = act_limit +1;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   if act > act_max then do;
+MPRINT(SIMVAR):   act = act_max;
+MPRINT(SIMVAR):   act_limit = act_limit +1;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   end ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   sact [ time] = act ;
+MPRINT(SIMVAR):  ;
+MPRINT(GENPRED):   acts = act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   actc = act*act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(SIMVAR):  ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do ;
+MPRINT(SIMVAR):   act = act_l1 ;
+MPRINT(SIMVAR):   sact [time] = act ;
+MPRINT(GENPRED):   acts = act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   actc = act*act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(SIMVAR):  ;
+MPRINT(SIMVAR):   end;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   if time = 0 then intervened = 0;
+MPRINT(INTERV_INIT):   intervenedk[time] = 0;
+MPRINT(INTERV_INIT):   x = 0;
+MPRINT(INTERV_INIT):   if x >= 1 then elig_persontime = elig_persontime + 1;
+MPRINT(INTERV_INIT):   suminterv = suminterv + intervenedk[time] ;
+MPRINT(INTERV_INIT):   if mygood = 1 then do ;
+MPRINT(GENPRED):   tshbp_inter = tshbp_l1_inter + hbp;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl1=max((tshbp_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_inter-6)/_kd_,0)**3 
+26                                   The SAS System          12:48 Monday, July 29, 2019
+
+-(6-1)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl2=max((tshbp_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-2)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(GENPRED):   acts = act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   actc = act*act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   mdia = 0 ;
+MPRINT(INTERV_INIT):   do i=1 to dim(aboutc);
+MPRINT(INTERV_INIT):   mdia =sum(mdia,aboutc(i)*asdia(i));
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   if (1=0) then do;
+MPRINT(INTERV_INIT):   * at no sim time ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   else do ;
+MPRINT(INTERV_INIT):   pdia = 1/(1+exp(-mdia));
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   sdia[time] = pdia ;
+MPRINT(INTERV_INIT):   if calchazard = 1 then do ;
+MPRINT(INTERV_INIT):   if Uoutc[time] <= pdia then dia = 1;
+MPRINT(INTERV_INIT):   else dia = 0;
+MPRINT(INTERV_INIT):   if dia = 1 then do ;
+MPRINT(INTERV_INIT):   newtime = time ;
+MPRINT(INTERV_INIT):   censor = 0 ;
+MPRINT(INTERV_INIT):   mygood = 0 ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   mcomprisk = 0 ;
+MPRINT(INTERV_INIT):   do i=1 to dim(abcomprisk);
+MPRINT(INTERV_INIT):   mcomprisk=sum(mcomprisk,abcomprisk(i)*ascomprisk(i));
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   if (1=0) then do;
+MPRINT(INTERV_INIT):   * at no sim time ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   else do ;
+MPRINT(INTERV_INIT):   pcomprisk = 1/(1+exp(-mcomprisk));
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   scomprisk[time] = pcomprisk ;
+MPRINT(INTERV_INIT):   if calchazard = 1 then do;
+MPRINT(INTERV_INIT):   if Ucomprisk[time] <= pcomprisk then censor = 2;
+MPRINT(INTERV_INIT):   else censor = 0;
+MPRINT(INTERV_INIT):   if censor = 2 then do ;
+MPRINT(INTERV_INIT):   newtime = time ;
+27                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(INTERV_INIT):   dia = .;
+MPRINT(INTERV_INIT):   mygood = 0 ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   pcensl=0;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   else do ;
+MPRINT(INTERV_INIT):   pdia = . ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   if calchazard = 1 and mygood = 1 and time = ( 6 -1) then do ;
+MPRINT(INTERV_INIT):   censor = 1 ;
+MPRINT(INTERV_INIT):   dia = . ;
+MPRINT(INTERV_INIT):   newtime = time ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   hbp_l3 = hbp_l2 ;
+MPRINT(INTERV_INIT):   hbp_l2 = hbp_l1 ;
+MPRINT(INTERV_INIT):   hbp_l1 = hbp ;
+MPRINT(INTERV_INIT):   tshbp_l1_inter = tshbp_inter;
+MPRINT(INTERV_INIT):   act_l3 = act_l2 ;
+MPRINT(INTERV_INIT):   act_l2 = act_l1 ;
+MPRINT(INTERV_INIT):   act_l1 = act ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   end ;
+MPRINT(INTERV_INIT):   if (0 ne 0 & elig_persontime ne 0) then averinterv = suminterv / 
+elig_persontime;
+MPRINT(INTERV_INIT):   else averinterv = 0;
+MPRINT(SIMCUMINC):   cumsurv = 1;
+MPRINT(SIMCUMINC):   cuminc = 0;
+MPRINT(SIMCUMINC):   cumincdead=0;
+MPRINT(SIMCUMINC):   array cumincr{0:5} ;
+MPRINT(SIMCUMINC):   array cumsurvr{0:5} ;
+MPRINT(SIMCUMINC):   array cumcompriskr{0:5} ;
+MPRINT(SIMCUMINC):   if calchazard = 0 then do;
+MPRINT(SIMCUMINC):   do time = 0 to 5 ;
+MPRINT(SIMCUMINC):   inc = cumsurv*sdia[time]*(1-scomprisk[time]);
+MPRINT(SIMCUMINC):   incdead = cumsurv * scomprisk[time];
+MPRINT(SIMCUMINC):   cuminc = cuminc + inc;
+MPRINT(SIMCUMINC):   cumincr[time] = cuminc ;
+MPRINT(SIMCUMINC):   cumincdead = cumincdead + incdead;
+MPRINT(SIMCUMINC):   cumcompriskr[time] = cumincdead ;
+MPRINT(SIMCUMINC):   surv = (1-sdia[time])*(1-scomprisk[time]);
+MPRINT(SIMCUMINC):   cumsurv = cumsurv*surv;
+MPRINT(SIMCUMINC):   cumsurvr[time] = cumsurv ;
+MPRINT(SIMCUMINC):   end;
+MPRINT(SIMCUMINC):   end;
+MPRINT(SIMCUMINC):   drop time inc surv ;
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   if _end_ then do;
+MPRINT(INTERV_INIT):   put 'act predicted out of range = ' act_limit;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   run;
+
+28                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: DATA STEP view saved on file WORK.SIMULATED0.
+NOTE: A stored DATA STEP view cannot run under a different operating system.
+NOTE: DATA statement used (Total process time):
+      real time           0.14 seconds
+      cpu time            0.08 seconds
+      
+
+MPRINT(GFORMULA):  ;
+Initializing intervention data view  1
+MPRINT(INTERV_INIT):   data simulated1 ( keep = intervened averinterv shbp1 shbp2 shbp3 
+shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 sact5 sact6 cuminc sdia1 cumincr1 cumsurvr1 
+cumcompriskr1 sdia2 cumincr2 cumsurvr2 cumcompriskr2 sdia3 cumincr3 cumsurvr3 
+cumcompriskr3 sdia4 cumincr4 cumsurvr4 cumcompriskr4 sdia5 cumincr5 cumsurvr5 
+cumcompriskr5 sdia6 cumincr6 cumsurvr6 cumcompriskr6 censor newtime dia ) /view = 
+simulated1 ;
+MPRINT(INTERV_INIT):   merge simul _betar_ _seedr_ _covbounds_ _calchazard_ end=_end_;
+MPRINT(INTERV_INIT):   by _sample_;
+MPRINT(INTERV_INIT):   call streaminit(_seedr_);
+MPRINT(INTERV_INIT):   drop _seedr_ ;
+MPRINT(INTERV_INIT):   dia = .;
+MPRINT(INTERV_INIT):   censor = . ;
+MPRINT(INTERV_INIT):   newtime = .;
+MPRINT(INTERV_INIT):   retain act_limit 0;
+MPRINT(INTERV_INIT):   retain totinterv 0;
+MPRINT(INTERV_INIT):   retain act_totinterv 0;
+MPRINT(INTERV_INIT):   _intno_ = 1 ;
+MPRINT(INTERV_INIT):   uno=1;
+MPRINT(INTERV_INIT):   array aboutc boutc00-boutc16;
+MPRINT(INTERV_INIT):   array sdia {0:5 } ;
+MPRINT(INTERV_INIT):   array abcomprisk bcomprisk00-bcomprisk16;
+MPRINT(INTERV_INIT):   array scomprisk {0:5} ;
+MPRINT(INTERV_INIT):   array abhbp bvar1_00-bvar1_12;
+MPRINT(INTERV_INIT):   array abact bvar2_00-bvar2_16;
+MPRINT(INTERV_INIT):   array abzact bvar2z_00-bvar2z_16;
+MPRINT(INTERV_INIT):   array stime {0:5 } ;
+MPRINT(INTERV_INIT):   stime [0] = time ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   array ashbp uno baseage
+MPRINT(LISTPRED):   time_1 time_2 time_3 time_4 time_5 act_l2 act_l1 acts_l2 acts_l1 
+actc_l2 actc_l1
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   array shbp {0:5 } ;
+MPRINT(INTERV_INIT):   shbp [0] = hbp ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   array asact uno baseage
+MPRINT(LISTPRED):   time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l2 act_l1 acts_l2 acts_l1 actc_l2 actc_l1
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   array sact {0:5 } ;
+MPRINT(INTERV_INIT):   sact [0] = act ;
+MPRINT(INTERV_INIT):   array asdia uno baseage
+MPRINT(LISTPRED):   time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+29                                   The SAS System          12:48 Monday, July 29, 2019
+
+tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   array ascomprisk uno baseage
+MPRINT(LISTPRED):   time_1 time_2 time_3 time_4 time_5 hbp tshbp_inter tshbp_inter_spl1 
+tshbp_inter_spl2 act_l1 act acts_l1 acts actc_l1 actc
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   array Uoutc{0:5} ;
+MPRINT(INTERV_INIT):   array Ucomprisk{0:5};
+MPRINT(INTERV_INIT):   scensl = 0;
+MPRINT(INTERV_INIT):   mygood = 1 ;
+MPRINT(INTERV_INIT):   array intervenedk{0:5} ;
+MPRINT(INTERV_INIT):   suminterv = 0;
+MPRINT(INTERV_INIT):   elig_persontime = 0;
+MPRINT(INTERV_INIT):   do time = 0 to 5 ;
+MPRINT(INTERV_INIT):   time_l1 = time - 1;
+MPRINT(INTERV_INIT):   time_l2 = time - 2 ;
+MPRINT(INTERV_INIT):   time_l3 = time - 3 ;
+MPRINT(INTERV_INIT):   _ind2 = 1;
+MPRINT(INTERV_INIT):   _ind3 = 1;
+MPRINT(INTERV_INIT):   _ind4 = 1;
+MPRINT(INTERV_INIT):   if time < 2 then _ind2 = 0 ;
+MPRINT(INTERV_INIT):   if time < 3 then _ind3 = 0 ;
+MPRINT(INTERV_INIT):   if time < 4 then _ind4 = 0 ;
+MPRINT(INTERV_INIT):   Uoutc[time] = rand('uniform');
+MPRINT(INTERV_INIT):   Ucomprisk[time] = rand('uniform');
+MPRINT(INTERV_INIT):   *running genpred for lagged valuees ;
+MPRINT(MAKECAT):   if time = . then timegr = .;
+MPRINT(MAKECAT):   else if time < 1 then timegr = 1;
+MPRINT(MAKECAT):   else if time < 2 then timegr = 2;
+MPRINT(MAKECAT):   else if time < 3 then timegr = 3;
+MPRINT(MAKECAT):   else if time < 4 then timegr = 4;
+MPRINT(MAKECAT):   else if time < 5 then timegr = 5;
+MPRINT(MAKECAT):   else timegr = 6;
+MPRINT(MAKECAT):   time_1 = (timegr = 1);
+MPRINT(MAKECAT):   time_2 = (timegr = 2);
+MPRINT(MAKECAT):   time_3 = (timegr = 3);
+MPRINT(MAKECAT):   time_4 = (timegr = 4);
+MPRINT(MAKECAT):   time_5 = (timegr = 5);
+MPRINT(MAKECAT):   drop timegr;
+MPRINT(GENPRED):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(GENPRED):   if time = 0 then do ;
+MPRINT(GENPRED):   tshbp_l1_inter = 0 ;
+MPRINT(GENPRED):   end;
+MPRINT(GENPRED):  ;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_l1_inter_spl1=max((tshbp_l1_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_l1_inter-6)/_kd_
+,0)**3 -(6-1)*max((tshbp_l1_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+30                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(RCSPLINE):   
+tshbp_l1_inter_spl2=max((tshbp_l1_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_l1_inter-6)/_kd_
+,0)**3 -(6-2)*max((tshbp_l1_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(GENPRED):   ;
+MPRINT(GENPRED):   acts_l1 = act_l1*act_l1;
+MPRINT(GENPRED):   acts_l2 = act_l2*act_l2;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   actc_l1 = act_l1*act_l1*act_l1;
+MPRINT(GENPRED):   actc_l2 = act_l2*act_l2*act_l2;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(SIMVAR):   Uhbp=rand('uniform');
+MPRINT(SIMVAR):   Uzact=rand('uniform');
+MPRINT(SIMVAR):   Nact = rand('normal');
+MPRINT(SIMVAR):   if not( time in (-1) ) then do;
+MPRINT(SIMVAR):   if 1 > time then do;
+MPRINT(SIMVAR):   hbp = hbp_b + 0;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   if (1=0) then do;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   mhbp = 0 ;
+MPRINT(SIMVAR):   do j=1 to dim(abhbp);
+MPRINT(SIMVAR):   mhbp =sum(mhbp ,abhbp(j)*ashbp(j));
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   if hbp =1 then hbp =1;
+MPRINT(SIMVAR):   if hbp =0 then do;
+MPRINT(SIMVAR):   phbp =1/(1+exp(-mhbp));
+MPRINT(SIMVAR):   if Uhbp <=phbp then hbp =1;
+MPRINT(SIMVAR):   if Uhbp >phbp >. then hbp =0;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   end ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   shbp [ time] = hbp ;
+MPRINT(SIMVAR):  ;
+MPRINT(GENPRED):   tshbp_inter = tshbp_l1_inter + hbp;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl1=max((tshbp_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-1)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl2=max((tshbp_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-2)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(SIMVAR):  ;
+MPRINT(SIMVAR):   end;
+31                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(SIMVAR):   else do ;
+MPRINT(SIMVAR):   hbp = hbp_l1 ;
+MPRINT(SIMVAR):   shbp [time] = hbp ;
+MPRINT(GENPRED):   tshbp_inter = tshbp_l1_inter + hbp;
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl1=max((tshbp_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-1)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl2=max((tshbp_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-2)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(SIMVAR):  ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   if not( time in (-1) ) then do;
+MPRINT(SIMVAR):   if 1 > time then do;
+MPRINT(SIMVAR):   act = act_b + 0;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   if (1=0) then do;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   mzact = 0 ;
+MPRINT(SIMVAR):   do j=1 to dim(abzact);
+MPRINT(SIMVAR):   mzact=sum(mzact,abzact(j)*asact(j));
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   pzact=1/(1+exp(-mzact));
+MPRINT(SIMVAR):   if Uzact<=pzact then zact=1;
+MPRINT(SIMVAR):   if Uzact>pzact>. then zact=0;
+MPRINT(SIMVAR):   if zact=0 then act=0;
+MPRINT(SIMVAR):   else do;
+MPRINT(SIMVAR):   mact = 0 ;
+MPRINT(SIMVAR):   do j=1 to dim(abact);
+MPRINT(SIMVAR):   mact=sum(mact,abact(j)*asact(j));
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   act=exp(mact+Nact*seact);
+MPRINT(SIMVAR):   if act < act_min then do;
+MPRINT(SIMVAR):   act = act_min;
+MPRINT(SIMVAR):   act_limit = act_limit +1;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   if act > act_max then do;
+MPRINT(SIMVAR):   act = act_max;
+MPRINT(SIMVAR):   act_limit = act_limit +1;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   end ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   sact [ time] = act ;
+MPRINT(SIMVAR):  ;
+MPRINT(GENPRED):   acts = act*act;
+32                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   actc = act*act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(SIMVAR):  ;
+MPRINT(SIMVAR):   end;
+MPRINT(SIMVAR):   else do ;
+MPRINT(SIMVAR):   act = act_l1 ;
+MPRINT(SIMVAR):   sact [time] = act ;
+MPRINT(GENPRED):   acts = act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   actc = act*act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(SIMVAR):  ;
+MPRINT(SIMVAR):   end;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   if time = 0 then intervened = 0;
+MPRINT(INTERV_INIT):   intervenedk[time] = 0;
+MPRINT(INTERV_INIT):   x = 0;
+MPRINT(INTERV_INIT):   if time in (0 1 2 3 4 5) then do;
+MPRINT(INTERV_INIT):   if 1=1 then do;
+MPRINT(INTERV_INIT):   if time in (-1) then x = x ;
+MPRINT(INTERV_INIT):   else x = x + 1;
+MPRINT(INTERV_INIT):   if .^=. then do;
+MPRINT(INTERV_INIT):   if act >. and (rand('uniform')<=1) then do;
+MPRINT(INTERV_INIT):   act=.;
+MPRINT(INTERV_INIT):   sact [ time] = act ;
+MPRINT(INTERV_INIT):   act_totinterv = act_totinterv + 1;
+MPRINT(INTERV_INIT):   intervened = 1;
+MPRINT(INTERV_INIT):   intervenedk[time] = 1;
+MPRINT(INTERV_INIT):   totinterv = totinterv + 1;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   if 30^=. then do;
+MPRINT(INTERV_INIT):   if act<30 and (rand('uniform')<=1) then do;
+MPRINT(INTERV_INIT):   act=30;
+MPRINT(INTERV_INIT):   sact [ time] = act ;
+MPRINT(INTERV_INIT):   act_totinterv = act_totinterv + 1;
+MPRINT(INTERV_INIT):   intervened = 1;
+MPRINT(INTERV_INIT):   intervenedk[time] = 1;
+MPRINT(INTERV_INIT):   totinterv = totinterv + 1;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   if x >= 1 then elig_persontime = elig_persontime + 1;
+MPRINT(INTERV_INIT):   suminterv = suminterv + intervenedk[time] ;
+MPRINT(INTERV_INIT):   if mygood = 1 then do ;
+MPRINT(GENPRED):   tshbp_inter = tshbp_l1_inter + hbp;
+33                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(RCSPLINE):   DROP _kd_;
+MPRINT(RCSPLINE):   _kd_= (6 - 1)**.666666666666 ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl1=max((tshbp_inter-1)/_kd_,0)**3+((4-1)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-1)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(RCSPLINE):   
+tshbp_inter_spl2=max((tshbp_inter-2)/_kd_,0)**3+((4-2)*max((tshbp_inter-6)/_kd_,0)**3 
+-(6-2)*max((tshbp_inter-4)/_kd_,0)**3)/(6-4);
+MPRINT(RCSPLINE):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(GENPRED):   acts = act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):   actc = act*act*act;
+MPRINT(GENPRED):  ;
+MPRINT(GENPRED):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   mdia = 0 ;
+MPRINT(INTERV_INIT):   do i=1 to dim(aboutc);
+MPRINT(INTERV_INIT):   mdia =sum(mdia,aboutc(i)*asdia(i));
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   if (1=0) then do;
+MPRINT(INTERV_INIT):   * at no sim time ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   else do ;
+MPRINT(INTERV_INIT):   pdia = 1/(1+exp(-mdia));
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   sdia[time] = pdia ;
+MPRINT(INTERV_INIT):   if calchazard = 1 then do ;
+MPRINT(INTERV_INIT):   if Uoutc[time] <= pdia then dia = 1;
+MPRINT(INTERV_INIT):   else dia = 0;
+MPRINT(INTERV_INIT):   if dia = 1 then do ;
+MPRINT(INTERV_INIT):   newtime = time ;
+MPRINT(INTERV_INIT):   censor = 0 ;
+MPRINT(INTERV_INIT):   mygood = 0 ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   mcomprisk = 0 ;
+MPRINT(INTERV_INIT):   do i=1 to dim(abcomprisk);
+MPRINT(INTERV_INIT):   mcomprisk=sum(mcomprisk,abcomprisk(i)*ascomprisk(i));
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   if (1=0) then do;
+MPRINT(INTERV_INIT):   * at no sim time ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   else do ;
+MPRINT(INTERV_INIT):   pcomprisk = 1/(1+exp(-mcomprisk));
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   scomprisk[time] = pcomprisk ;
+MPRINT(INTERV_INIT):   if calchazard = 1 then do;
+34                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(INTERV_INIT):   if Ucomprisk[time] <= pcomprisk then censor = 2;
+MPRINT(INTERV_INIT):   else censor = 0;
+MPRINT(INTERV_INIT):   if censor = 2 then do ;
+MPRINT(INTERV_INIT):   newtime = time ;
+MPRINT(INTERV_INIT):   dia = .;
+MPRINT(INTERV_INIT):   mygood = 0 ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   pcensl=0;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   else do ;
+MPRINT(INTERV_INIT):   pdia = . ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   if calchazard = 1 and mygood = 1 and time = ( 6 -1) then do ;
+MPRINT(INTERV_INIT):   censor = 1 ;
+MPRINT(INTERV_INIT):   dia = . ;
+MPRINT(INTERV_INIT):   newtime = time ;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   hbp_l3 = hbp_l2 ;
+MPRINT(INTERV_INIT):   hbp_l2 = hbp_l1 ;
+MPRINT(INTERV_INIT):   hbp_l1 = hbp ;
+MPRINT(INTERV_INIT):   tshbp_l1_inter = tshbp_inter;
+MPRINT(INTERV_INIT):   act_l3 = act_l2 ;
+MPRINT(INTERV_INIT):   act_l2 = act_l1 ;
+MPRINT(INTERV_INIT):   act_l1 = act ;
+MPRINT(INTERV_INIT):  ;
+MPRINT(INTERV_INIT):   end ;
+MPRINT(INTERV_INIT):   if (1 ne 0 & elig_persontime ne 0) then averinterv = suminterv / 
+elig_persontime;
+MPRINT(INTERV_INIT):   else averinterv = 0;
+MPRINT(SIMCUMINC):   cumsurv = 1;
+MPRINT(SIMCUMINC):   cuminc = 0;
+MPRINT(SIMCUMINC):   cumincdead=0;
+MPRINT(SIMCUMINC):   array cumincr{0:5} ;
+MPRINT(SIMCUMINC):   array cumsurvr{0:5} ;
+MPRINT(SIMCUMINC):   array cumcompriskr{0:5} ;
+MPRINT(SIMCUMINC):   if calchazard = 0 then do;
+MPRINT(SIMCUMINC):   do time = 0 to 5 ;
+MPRINT(SIMCUMINC):   inc = cumsurv*sdia[time]*(1-scomprisk[time]);
+MPRINT(SIMCUMINC):   incdead = cumsurv * scomprisk[time];
+MPRINT(SIMCUMINC):   cuminc = cuminc + inc;
+MPRINT(SIMCUMINC):   cumincr[time] = cuminc ;
+MPRINT(SIMCUMINC):   cumincdead = cumincdead + incdead;
+MPRINT(SIMCUMINC):   cumcompriskr[time] = cumincdead ;
+MPRINT(SIMCUMINC):   surv = (1-sdia[time])*(1-scomprisk[time]);
+MPRINT(SIMCUMINC):   cumsurv = cumsurv*surv;
+MPRINT(SIMCUMINC):   cumsurvr[time] = cumsurv ;
+MPRINT(SIMCUMINC):   end;
+MPRINT(SIMCUMINC):   end;
+MPRINT(SIMCUMINC):   drop time inc surv ;
+MPRINT(INTERV_INIT):   ;
+MPRINT(INTERV_INIT):   if _end_ then do;
+35                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(INTERV_INIT):   put 'act predicted out of range = ' act_limit;
+MPRINT(INTERV_INIT):   put 'act intervened on = ' act_totinterv;
+MPRINT(INTERV_INIT):   end;
+MPRINT(INTERV_INIT):   run;
+
+NOTE: DATA STEP view saved on file WORK.SIMULATED1.
+NOTE: A stored DATA STEP view cannot run under a different operating system.
+NOTE: DATA statement used (Total process time):
+      real time           0.13 seconds
+      cpu time            0.08 seconds
+      
+
+MPRINT(GFORMULA):  ;
+MPRINT(CREATEHAZARD):   data _calchazard_ ;
+MPRINT(CREATEHAZARD):   calchazard = 1 ;
+MPRINT(CREATEHAZARD):   _sample_ = 0 ;
+MPRINT(CREATEHAZARD):   run;
+
+NOTE: The data set WORK._CALCHAZARD_ has 1 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(CREATEHAZARD):   data hazard1 ;
+MPRINT(CREATEHAZARD):   set simulated0;
+MPRINT(CREATEHAZARD):   int = 0;
+MPRINT(CREATEHAZARD):   keep int newtime dia censor ;
+MPRINT(CREATEHAZARD):   run;
+
+act predicted out of range = 4
+NOTE: View WORK.SIMULATED0.VIEW used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.05 seconds
+      
+NOTE: There were 1000 observations read from the data set WORK.SIMUL.
+NOTE: There were 1 observations read from the data set WORK._BETAR_.
+NOTE: There were 1 observations read from the data set WORK._SEEDR_.
+NOTE: There were 1 observations read from the data set WORK._COVBOUNDS_.
+NOTE: There were 1 observations read from the data set WORK._CALCHAZARD_.
+NOTE: There were 1000 observations read from the data set WORK.SIMULATED0.
+NOTE: The data set WORK.HAZARD1 has 1000 observations and 4 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.13 seconds
+      cpu time            0.05 seconds
+      
+
+MPRINT(CREATEHAZARD):   data hazard2 ;
+MPRINT(CREATEHAZARD):   set simulated1;
+MPRINT(CREATEHAZARD):   int = 1 ;
+MPRINT(CREATEHAZARD):   keep int newtime dia censor ;
+MPRINT(CREATEHAZARD):   run;
+36                                   The SAS System          12:48 Monday, July 29, 2019
+
+
+act predicted out of range = 4
+act intervened on = 3536
+NOTE: View WORK.SIMULATED1.VIEW used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.04 seconds
+      
+NOTE: There were 1000 observations read from the data set WORK.SIMUL.
+NOTE: There were 1 observations read from the data set WORK._BETAR_.
+NOTE: There were 1 observations read from the data set WORK._SEEDR_.
+NOTE: There were 1 observations read from the data set WORK._COVBOUNDS_.
+NOTE: There were 1 observations read from the data set WORK._CALCHAZARD_.
+NOTE: There were 1000 observations read from the data set WORK.SIMULATED1.
+NOTE: The data set WORK.HAZARD2 has 1000 observations and 4 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.12 seconds
+      cpu time            0.05 seconds
+      
+
+MPRINT(CREATEHAZARD):   data both ;
+MPRINT(CREATEHAZARD):   set hazard1 hazard2 ;
+MPRINT(CREATEHAZARD):   run;
+
+NOTE: There were 1000 observations read from the data set WORK.HAZARD1.
+NOTE: There were 1000 observations read from the data set WORK.HAZARD2.
+NOTE: The data set WORK.BOTH has 2000 observations and 4 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(CREATEHAZARD):   data _calchazard_ ;
+MPRINT(CREATEHAZARD):   calchazard = 0 ;
+MPRINT(CREATEHAZARD):   _sample_ = 0 ;
+MPRINT(CREATEHAZARD):   run;
+
+NOTE: The data set WORK._CALCHAZARD_ has 1 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(CREATEHAZARD):   data both ;
+MPRINT(CREATEHAZARD):   set both ;
+MPRINT(CREATEHAZARD):   event = dia ;
+MPRINT(CREATEHAZARD):   *if &outc = 1 then event = 1 ;
+MPRINT(CREATEHAZARD):   *else event = 0 ;
+MPRINT(CREATEHAZARD):   if int = 0 then int = 0;
+MPRINT(CREATEHAZARD):   else int = 1 ;
+MPRINT(CREATEHAZARD):   run;
+
+NOTE: There were 2000 observations read from the data set WORK.BOTH.
+37                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: The data set WORK.BOTH has 2000 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.14 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(CREATEHAZARD):   *ods select none ;
+MPRINT(CREATEHAZARD):   proc phreg data = both ;
+MPRINT(CREATEHAZARD):   ods output ParameterEstimates=_inthr0_ ;
+MPRINT(CREATEHAZARD):   model newtime*event(0) = int / rl eventcode=1 ;
+MPRINT(CREATEHAZARD):   hazardratio 'Subdistribution Hazards' int;
+MPRINT(CREATEHAZARD):   run;
+
+
+NOTE: 1911 observations were deleted due either to missing or invalid values for the 
+      time, censoring, frequency or explanatory variables or to invalid operations in 
+      generating the values for some of the explanatory variables.
+NOTE: Convergence criterion (GCONV=1E-8) satisfied.
+NOTE: The data set WORK._INTHR0_ has 1 observations and 9 variables.
+NOTE: The PROCEDURE PHREG printed pages 10-11.
+NOTE: PROCEDURE PHREG used (Total process time):
+      real time           0.48 seconds
+      cpu time            0.04 seconds
+      
+
+MPRINT(CREATEHAZARD):   *ods select all ;
+MPRINT(CREATEHAZARD):   proc sql ;
+MPRINT(CREATEHAZARD):   select HazardRatio into :sample_hazard from _inthr0_ ;
+MPRINT(CREATEHAZARD):   quit;
+NOTE: The PROCEDURE SQL printed page 12.
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(CREATEHAZARD):   run;
+hazard =    0.918
+Computing intervention 0
+MPRINT(INTERV):   proc sort data = simul;
+MPRINT(INTERV):   by _sample_;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1000 observations read from the data set WORK.SIMUL.
+NOTE: The data set WORK.SIMUL has 1000 observations and 11 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   proc means data=simulated0 noprint ;
+MPRINT(INTERV):   output out=stats_holder mean ( cuminc sdia1 sdia2 sdia3 sdia4 sdia5 
+sdia6 intervened averinterv shbp1 shbp2 shbp3 shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 
+38                                   The SAS System          12:48 Monday, July 29, 2019
+
+sact5 sact6) = pd sdia1 sdia2 sdia3 sdia4 sdia5 sdia6 intervened averinterv shbp1 shbp2 
+shbp3 shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 sact5 sact6 min ( cuminc sdia1 sdia2 
+sdia3 sdia4 sdia5 sdia6 intervened averinterv shbp1 shbp2 shbp3 shbp4 shbp5 shbp6 sact1 
+sact2 sact3 sact4 sact5 sact6) = pd_min sdia1_min sdia2_min sdia3_min sdia4_min 
+sdia5_min sdia6_min intervened_min averinterv_min shbp1_min shbp2_min shbp3_min 
+shbp4_min shbp5_min shbp6_min sact1_min sact2_min sact3_min sact4_min sact5_min 
+sact6_min max ( cuminc sdia1 sdia2 sdia3 sdia4 sdia5 sdia6 intervened averinterv shbp1 
+shbp2 shbp3 shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 sact5 sact6 ) = pd_max sdia1_max 
+sdia2_max sdia3_max sdia4_max sdia5_max sdia6_max intervened_max averinterv_max 
+shbp1_max shbp2_max shbp3_max shbp4_max shbp5_max shbp6_max sact1_max sact2_max 
+sact3_max sact4_max sact5_max sact6_max ;
+MPRINT(INTERV):   output out=surv_holder mean( cumincr1 cumsurvr1 cumcompriskr1 
+cumincr2 cumsurvr2 cumcompriskr2 cumincr3 cumsurvr3 cumcompriskr3 cumincr4 cumsurvr4 
+cumcompriskr4 cumincr5 cumsurvr5 cumcompriskr5 cumincr6 cumsurvr6 cumcompriskr6 ) = 
+risk1 surv1 comprisk1 risk2 surv2 comprisk2 risk3 surv3 comprisk3 risk4 surv4 comprisk4 
+risk5 surv5 comprisk5 risk6 surv6 comprisk6 ;
+MPRINT(INTERV):   run;
+
+act predicted out of range = 4
+NOTE: View WORK.SIMULATED0.VIEW used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.07 seconds
+      
+NOTE: There were 1000 observations read from the data set WORK.SIMUL.
+NOTE: There were 1 observations read from the data set WORK._BETAR_.
+NOTE: There were 1 observations read from the data set WORK._SEEDR_.
+NOTE: There were 1 observations read from the data set WORK._COVBOUNDS_.
+NOTE: There were 1 observations read from the data set WORK._CALCHAZARD_.
+NOTE: There were 1000 observations read from the data set WORK.SIMULATED0.
+NOTE: The data set WORK.STATS_HOLDER has 1 observations and 65 variables.
+NOTE: The data set WORK.SURV_HOLDER has 1 observations and 20 variables.
+NOTE: PROCEDURE MEANS used (Total process time):
+      real time           0.16 seconds
+      cpu time            0.07 seconds
+      
+
+MPRINT(INTERV):   data interv0;
+MPRINT(INTERV):   set stats_holder;
+MPRINT(INTERV):   _sample_ = 0;
+MPRINT(INTERV):   length int2 $70 ;
+MPRINT(INTERV):   int=0;
+MPRINT(INTERV):   int2='Natural course';
+MPRINT(INTERV):   n=_FREQ_;
+MPRINT(INTERV):   keep int int2 _sample_ n pd sdia1 sdia2 sdia3 sdia4 sdia5 sdia6 
+intervened averinterv shbp1 sact1 shbp2 sact2 shbp3 sact3 shbp4 sact4 shbp5 sact5 shbp6 
+sact6 dataname ssize obsp ;
+MPRINT(INTERV):   dataname = "sample";
+MPRINT(INTERV):   ssize = 1000 ;
+MPRINT(INTERV):   obsp = 0.0425068537 ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.STATS_HOLDER.
+39                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: The data set WORK.INTERV0 has 1 observations and 28 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.05 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   data surv_tmp0;
+MPRINT(INTERV):   set surv_holder ;
+MPRINT(INTERV):   length int2 $70 ;
+MPRINT(INTERV):   _sample_ = 0 ;
+MPRINT(INTERV):   int = 0 ;
+MPRINT(INTERV):   int2 = 'Natural course' ;
+MPRINT(INTERV):   n = _freq_ ;
+MPRINT(INTERV):   surv0 = 1 ;
+MPRINT(INTERV):   keep int int2 _sample_ n surv0 risk1 surv1 comprisk1 risk2 surv2 
+comprisk2 risk3 surv3 comprisk3 risk4 surv4 comprisk4 risk5 surv5 comprisk5 risk6 surv6 
+comprisk6 ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.SURV_HOLDER.
+NOTE: The data set WORK.SURV_TMP0 has 1 observations and 23 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   proc datasets library = work nolist ;
+MPRINT(INTERV):   delete surv_holder ;
+MPRINT(INTERV):   quit;
+
+NOTE: Deleting WORK.SURV_HOLDER (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.05 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   data mean_holder ;
+MPRINT(INTERV):   set stats_holder ;
+MPRINT(INTERV):   keep pd sdia1 sdia2 sdia3 sdia4 sdia5 sdia6 intervened averinterv 
+shbp1 shbp2 shbp3 shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 sact5 sact6 ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.STATS_HOLDER.
+NOTE: The data set WORK.MEAN_HOLDER has 1 observations and 21 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   data max_holder ;
+MPRINT(INTERV):   set stats_holder ;
+MPRINT(INTERV):   keep pd_max sdia1_max sdia2_max sdia3_max sdia4_max sdia5_max 
+40                                   The SAS System          12:48 Monday, July 29, 2019
+
+sdia6_max intervened_max averinterv_max shbp1_max shbp2_max shbp3_max shbp4_max 
+shbp5_max shbp6_max sact1_max sact2_max sact3_max sact4_max sact5_max sact6_max ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.STATS_HOLDER.
+NOTE: The data set WORK.MAX_HOLDER has 1 observations and 21 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   data min_holder ;
+MPRINT(INTERV):   set stats_holder ;
+MPRINT(INTERV):   keep pd_min sdia1_min sdia2_min sdia3_min sdia4_min sdia5_min 
+sdia6_min intervened_min averinterv_min shbp1_min shbp2_min shbp3_min shbp4_min 
+shbp5_min shbp6_min sact1_min sact2_min sact3_min sact4_min sact5_min sact6_min ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.STATS_HOLDER.
+NOTE: The data set WORK.MIN_HOLDER has 1 observations and 21 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   proc transpose data = mean_holder out= stats(rename = (col1= mean)) ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.MEAN_HOLDER.
+NOTE: The data set WORK.STATS has 21 observations and 2 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.11 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   proc transpose data = min_holder out = stats_min (rename = (col1 = 
+min) drop = _name_ );
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.MIN_HOLDER.
+NOTE: The data set WORK.STATS_MIN has 21 observations and 1 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.11 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   proc transpose data = max_holder out = stats_max (rename = (col1=max) 
+drop=_name_ );
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.MAX_HOLDER.
+NOTE: The data set WORK.STATS_MAX has 21 observations and 1 variables.
+41                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.12 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   data test ;
+MPRINT(INTERV):   merge stats( rename=( _name_ = variable)) stats_min stats_max ;
+MPRINT(INTERV):   label variable = "Variable" mean = "Mean" min = "Minimum" max = 
+"Maximum";
+MPRINT(INTERV):   run;
+
+NOTE: There were 21 observations read from the data set WORK.STATS.
+NOTE: There were 21 observations read from the data set WORK.STATS_MIN.
+NOTE: There were 21 observations read from the data set WORK.STATS_MAX.
+NOTE: The data set WORK.TEST has 21 observations and 4 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   title " mean, min, max under intervention 0 ";
+MPRINT(INTERV):   proc print data = test noobs label ;
+MPRINT(INTERV):   var variable mean min max ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 21 observations read from the data set WORK.TEST.
+NOTE: The PROCEDURE PRINT printed page 13.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   title ;
+MPRINT(INTERV):   proc datasets library = work nolist ;
+MPRINT(INTERV):   delete stats test stats_min stats_max max_holder min_holder 
+mean_holder;
+MPRINT(INTERV):   quit;
+
+NOTE: Deleting WORK.STATS (memtype=DATA).
+NOTE: Deleting WORK.TEST (memtype=DATA).
+NOTE: Deleting WORK.STATS_MIN (memtype=DATA).
+NOTE: Deleting WORK.STATS_MAX (memtype=DATA).
+NOTE: Deleting WORK.MAX_HOLDER (memtype=DATA).
+NOTE: Deleting WORK.MIN_HOLDER (memtype=DATA).
+NOTE: Deleting WORK.MEAN_HOLDER (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.16 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   data simul ;
+MPRINT(INTERV):   set simul (keep = _sample_ newid time baseage hbp hbp_b hbp_l1 act 
+42                                   The SAS System          12:48 Monday, July 29, 2019
+
+act_l2 act_l1 act_b);
+MPRINT(INTERV):   run;
+
+NOTE: There were 1000 observations read from the data set WORK.SIMUL.
+NOTE: The data set WORK.SIMUL has 1000 observations and 11 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.08 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   proc datasets library = work nolist ;
+MPRINT(INTERV):   delete stats_holder ;
+MPRINT(INTERV):   quit;
+
+NOTE: Deleting WORK.STATS_HOLDER (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GFORMULA):  ;
+MPRINT(GFORMULA):   data survdata_all ;
+MPRINT(GFORMULA):   set surv_tmp0 ;
+MPRINT(GFORMULA):   run;
+
+NOTE: There were 1 observations read from the data set WORK.SURV_TMP0.
+NOTE: The data set WORK.SURVDATA_ALL has 1 observations and 23 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.02 seconds
+      
+
+Computing intervention 1
+MPRINT(INTERV):   proc sort data = simul;
+MPRINT(INTERV):   by _sample_;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1000 observations read from the data set WORK.SIMUL.
+NOTE: The data set WORK.SIMUL has 1000 observations and 11 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   proc means data=simulated1 noprint ;
+MPRINT(INTERV):   output out=stats_holder mean ( cuminc sdia1 sdia2 sdia3 sdia4 sdia5 
+sdia6 intervened averinterv shbp1 shbp2 shbp3 shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 
+sact5 sact6) = pd sdia1 sdia2 sdia3 sdia4 sdia5 sdia6 intervened averinterv shbp1 shbp2 
+shbp3 shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 sact5 sact6 min ( cuminc sdia1 sdia2 
+sdia3 sdia4 sdia5 sdia6 intervened averinterv shbp1 shbp2 shbp3 shbp4 shbp5 shbp6 sact1 
+sact2 sact3 sact4 sact5 sact6) = pd_min sdia1_min sdia2_min sdia3_min sdia4_min 
+sdia5_min sdia6_min intervened_min averinterv_min shbp1_min shbp2_min shbp3_min 
+43                                   The SAS System          12:48 Monday, July 29, 2019
+
+shbp4_min shbp5_min shbp6_min sact1_min sact2_min sact3_min sact4_min sact5_min 
+sact6_min max ( cuminc sdia1 sdia2 sdia3 sdia4 sdia5 sdia6 intervened averinterv shbp1 
+shbp2 shbp3 shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 sact5 sact6 ) = pd_max sdia1_max 
+sdia2_max sdia3_max sdia4_max sdia5_max sdia6_max intervened_max averinterv_max 
+shbp1_max shbp2_max shbp3_max shbp4_max shbp5_max shbp6_max sact1_max sact2_max 
+sact3_max sact4_max sact5_max sact6_max ;
+MPRINT(INTERV):   output out=surv_holder mean( cumincr1 cumsurvr1 cumcompriskr1 
+cumincr2 cumsurvr2 cumcompriskr2 cumincr3 cumsurvr3 cumcompriskr3 cumincr4 cumsurvr4 
+cumcompriskr4 cumincr5 cumsurvr5 cumcompriskr5 cumincr6 cumsurvr6 cumcompriskr6 ) = 
+risk1 surv1 comprisk1 risk2 surv2 comprisk2 risk3 surv3 comprisk3 risk4 surv4 comprisk4 
+risk5 surv5 comprisk5 risk6 surv6 comprisk6 ;
+MPRINT(INTERV):   run;
+
+act predicted out of range = 4
+act intervened on = 3536
+NOTE: View WORK.SIMULATED1.VIEW used (Total process time):
+      real time           0.12 seconds
+      cpu time            0.07 seconds
+      
+NOTE: There were 1000 observations read from the data set WORK.SIMUL.
+NOTE: There were 1 observations read from the data set WORK._BETAR_.
+NOTE: There were 1 observations read from the data set WORK._SEEDR_.
+NOTE: There were 1 observations read from the data set WORK._COVBOUNDS_.
+NOTE: There were 1 observations read from the data set WORK._CALCHAZARD_.
+NOTE: There were 1000 observations read from the data set WORK.SIMULATED1.
+NOTE: The data set WORK.STATS_HOLDER has 1 observations and 65 variables.
+NOTE: The data set WORK.SURV_HOLDER has 1 observations and 20 variables.
+NOTE: PROCEDURE MEANS used (Total process time):
+      real time           0.20 seconds
+      cpu time            0.07 seconds
+      
+
+MPRINT(INTERV):   data interv1;
+MPRINT(INTERV):   set stats_holder;
+MPRINT(INTERV):   _sample_ = 0;
+MPRINT(INTERV):   length int2 $70 ;
+MPRINT(INTERV):   int=1;
+MPRINT(INTERV):   int2='All subjects exercise at least 30 minutes per day in all 
+intervals';
+MPRINT(INTERV):   n=_FREQ_;
+MPRINT(INTERV):   keep int int2 _sample_ n pd sdia1 sdia2 sdia3 sdia4 sdia5 sdia6 
+intervened averinterv shbp1 sact1 shbp2 sact2 shbp3 sact3 shbp4 sact4 shbp5 sact5 shbp6 
+sact6 dataname ssize obsp ;
+MPRINT(INTERV):   dataname = "sample";
+MPRINT(INTERV):   ssize = 1000 ;
+MPRINT(INTERV):   obsp = 0.0425068537 ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.STATS_HOLDER.
+NOTE: The data set WORK.INTERV1 has 1 observations and 28 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.22 seconds
+44                                   The SAS System          12:48 Monday, July 29, 2019
+
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   data surv_tmp1;
+MPRINT(INTERV):   set surv_holder ;
+MPRINT(INTERV):   length int2 $70 ;
+MPRINT(INTERV):   _sample_ = 0 ;
+MPRINT(INTERV):   int = 1 ;
+MPRINT(INTERV):   int2 = 'All subjects exercise at least 30 minutes per day in all 
+intervals' ;
+MPRINT(INTERV):   n = _freq_ ;
+MPRINT(INTERV):   surv0 = 1 ;
+MPRINT(INTERV):   keep int int2 _sample_ n surv0 risk1 surv1 comprisk1 risk2 surv2 
+comprisk2 risk3 surv3 comprisk3 risk4 surv4 comprisk4 risk5 surv5 comprisk5 risk6 surv6 
+comprisk6 ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.SURV_HOLDER.
+NOTE: The data set WORK.SURV_TMP1 has 1 observations and 23 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   proc datasets library = work nolist ;
+MPRINT(INTERV):   delete surv_holder ;
+MPRINT(INTERV):   quit;
+
+NOTE: Deleting WORK.SURV_HOLDER (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(INTERV):   data mean_holder ;
+MPRINT(INTERV):   set stats_holder ;
+MPRINT(INTERV):   keep pd sdia1 sdia2 sdia3 sdia4 sdia5 sdia6 intervened averinterv 
+shbp1 shbp2 shbp3 shbp4 shbp5 shbp6 sact1 sact2 sact3 sact4 sact5 sact6 ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.STATS_HOLDER.
+NOTE: The data set WORK.MEAN_HOLDER has 1 observations and 21 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   data max_holder ;
+MPRINT(INTERV):   set stats_holder ;
+MPRINT(INTERV):   keep pd_max sdia1_max sdia2_max sdia3_max sdia4_max sdia5_max 
+sdia6_max intervened_max averinterv_max shbp1_max shbp2_max shbp3_max shbp4_max 
+shbp5_max shbp6_max sact1_max sact2_max sact3_max sact4_max sact5_max sact6_max ;
+45                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.STATS_HOLDER.
+NOTE: The data set WORK.MAX_HOLDER has 1 observations and 21 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   data min_holder ;
+MPRINT(INTERV):   set stats_holder ;
+MPRINT(INTERV):   keep pd_min sdia1_min sdia2_min sdia3_min sdia4_min sdia5_min 
+sdia6_min intervened_min averinterv_min shbp1_min shbp2_min shbp3_min shbp4_min 
+shbp5_min shbp6_min sact1_min sact2_min sact3_min sact4_min sact5_min sact6_min ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.STATS_HOLDER.
+NOTE: The data set WORK.MIN_HOLDER has 1 observations and 21 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.05 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   proc transpose data = mean_holder out= stats(rename = (col1= mean)) ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.MEAN_HOLDER.
+NOTE: The data set WORK.STATS has 21 observations and 2 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   proc transpose data = min_holder out = stats_min (rename = (col1 = 
+min) drop = _name_ );
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.MIN_HOLDER.
+NOTE: The data set WORK.STATS_MIN has 21 observations and 1 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.08 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   proc transpose data = max_holder out = stats_max (rename = (col1=max) 
+drop=_name_ );
+MPRINT(INTERV):   run;
+
+NOTE: There were 1 observations read from the data set WORK.MAX_HOLDER.
+NOTE: The data set WORK.STATS_MAX has 21 observations and 1 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.08 seconds
+46                                   The SAS System          12:48 Monday, July 29, 2019
+
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   data test ;
+MPRINT(INTERV):   merge stats( rename=( _name_ = variable)) stats_min stats_max ;
+MPRINT(INTERV):   label variable = "Variable" mean = "Mean" min = "Minimum" max = 
+"Maximum";
+MPRINT(INTERV):   run;
+
+NOTE: There were 21 observations read from the data set WORK.STATS.
+NOTE: There were 21 observations read from the data set WORK.STATS_MIN.
+NOTE: There were 21 observations read from the data set WORK.STATS_MAX.
+NOTE: The data set WORK.TEST has 21 observations and 4 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   title " mean, min, max under intervention 1 ";
+MPRINT(INTERV):   proc print data = test noobs label ;
+MPRINT(INTERV):   var variable mean min max ;
+MPRINT(INTERV):   run;
+
+NOTE: There were 21 observations read from the data set WORK.TEST.
+NOTE: The PROCEDURE PRINT printed page 14.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(INTERV):   title ;
+MPRINT(INTERV):   proc datasets library = work nolist ;
+MPRINT(INTERV):   delete stats test stats_min stats_max max_holder min_holder 
+mean_holder;
+MPRINT(INTERV):   quit;
+
+NOTE: Deleting WORK.STATS (memtype=DATA).
+NOTE: Deleting WORK.TEST (memtype=DATA).
+NOTE: Deleting WORK.STATS_MIN (memtype=DATA).
+NOTE: Deleting WORK.STATS_MAX (memtype=DATA).
+NOTE: Deleting WORK.MAX_HOLDER (memtype=DATA).
+NOTE: Deleting WORK.MIN_HOLDER (memtype=DATA).
+NOTE: Deleting WORK.MEAN_HOLDER (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.24 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   data simul ;
+MPRINT(INTERV):   set simul (keep = _sample_ newid time baseage hbp hbp_b hbp_l1 act 
+act_l2 act_l1 act_b);
+MPRINT(INTERV):   run;
+47                                   The SAS System          12:48 Monday, July 29, 2019
+
+
+NOTE: There were 1000 observations read from the data set WORK.SIMUL.
+NOTE: The data set WORK.SIMUL has 1000 observations and 11 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(INTERV):   proc datasets library = work nolist ;
+MPRINT(INTERV):   delete stats_holder ;
+MPRINT(INTERV):   quit;
+
+NOTE: Deleting WORK.STATS_HOLDER (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GFORMULA):  ;
+MPRINT(GFORMULA):   proc append base = survdata_all data = surv_tmp1 ;
+MPRINT(GFORMULA):   run;
+
+NOTE: Appending WORK.SURV_TMP1 to WORK.SURVDATA_ALL.
+NOTE: There were 1 observations read from the data set WORK.SURV_TMP1.
+NOTE: 1 observations added.
+NOTE: The data set WORK.SURVDATA_ALL has 2 observations and 23 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(GFORMULA):   data interv0_all;
+MPRINT(GFORMULA):   set interv0;
+MPRINT(GFORMULA):   run;
+
+NOTE: There were 1 observations read from the data set WORK.INTERV0.
+NOTE: The data set WORK.INTERV0_ALL has 1 observations and 28 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(GFORMULA):   data interv1_all;
+MPRINT(GFORMULA):   set interv1;
+MPRINT(GFORMULA):   run;
+
+NOTE: There were 1 observations read from the data set WORK.INTERV1.
+NOTE: The data set WORK.INTERV1_ALL has 1 observations and 28 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+48                                   The SAS System          12:48 Monday, July 29, 2019
+
+
+sample = 0 , seed = 9458
+MPRINT(GFORMULA):   proc datasets library = work nolist ;
+MPRINT(GFORMULA):   delete _betar_ _seedr_ param simul _covbounds_ surv_tmp0 surv_tmp1 ;
+MPRINT(GFORMULA):   quit;
+
+NOTE: Deleting WORK._BETAR_ (memtype=DATA).
+NOTE: Deleting WORK._SEEDR_ (memtype=DATA).
+NOTE: Deleting WORK.PARAM (memtype=DATA).
+NOTE: Deleting WORK.SIMUL (memtype=DATA).
+NOTE: Deleting WORK._COVBOUNDS_ (memtype=DATA).
+NOTE: Deleting WORK.SURV_TMP0 (memtype=DATA).
+NOTE: Deleting WORK.SURV_TMP1 (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.15 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   data fin;
+
+NOTE: The data set WORK.FIN has 1 observations and 0 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.08 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   data _ref_;
+MPRINT(RESULTS):   set interv0_all;
+MPRINT(RESULTS):   pDref=pD;
+MPRINT(RESULTS):   keep _sample_ pDref;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.INTERV0_ALL.
+NOTE: The data set WORK._REF_ has 1 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.05 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   data interv0;
+MPRINT(RESULTS):   merge interv0_all _ref_;
+MPRINT(RESULTS):   by _sample_;
+MPRINT(RESULTS):   if pDref^=0 then rr=pd /pDref;
+MPRINT(RESULTS):   if pDref^=0 then rd=pd - pDref;
+MPRINT(RESULTS):   if rd^=. and rd^=0 then nnt = 1/rd;
+MPRINT(RESULTS):   *logrr=log(rr);
+MPRINT(RESULTS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.INTERV0_ALL.
+NOTE: There were 1 observations read from the data set WORK._REF_.
+NOTE: The data set WORK.INTERV0 has 1 observations and 32 variables.
+NOTE: DATA statement used (Total process time):
+49                                   The SAS System          12:48 Monday, July 29, 2019
+
+      real time           0.11 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   data fin;
+MPRINT(RESULTS):   set fin interv0;
+MPRINT(RESULTS):   if _sample_=0;
+MPRINT(RESULTS):   if int=. then int=0;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.FIN.
+NOTE: There were 1 observations read from the data set WORK.INTERV0.
+NOTE: The data set WORK.FIN has 1 observations and 32 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   proc univariate data=interv0 noprint;
+MPRINT(RESULTS):   where _sample_ ne 0;
+MPRINT(RESULTS):   var pd rr rd nnt;
+MPRINT(RESULTS):   output out = temp0 mean = pd_mean RR_mean RD_mean NNT_mean std = 
+pd_std RR_std RD_std NNT_std pctlpre = pd_ RR_ RD_ NNT_ pctlname = llim95 ulim95 
+pctlpts = 2.5 97.5;
+MPRINT(RESULTS):   run;
+
+NOTE: No observations were selected from data set WORK.INTERV0.
+NOTE: The data set WORK.TEMP0 has 0 observations and 16 variables.
+NOTE: PROCEDURE UNIVARIATE used (Total process time):
+      real time           0.08 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   data temp0;
+MPRINT(RESULTS):   set temp0;
+MPRINT(RESULTS):   int = 0;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 0 observations read from the data set WORK.TEMP0.
+NOTE: The data set WORK.TEMP0 has 0 observations and 17 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.05 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   data fin;
+MPRINT(RESULTS):   merge fin temp0;
+MPRINT(RESULTS):   by int;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.FIN.
+NOTE: There were 0 observations read from the data set WORK.TEMP0.
+50                                   The SAS System          12:48 Monday, July 29, 2019
+
+NOTE: The data set WORK.FIN has 1 observations and 48 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.14 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(RESULTS):   proc datasets library=work nolist;
+MPRINT(RESULTS):   delete interv0 interv0_all temp0;
+MPRINT(RESULTS):   quit;
+
+NOTE: Deleting WORK.INTERV0 (memtype=DATA).
+NOTE: Deleting WORK.INTERV0_ALL (memtype=DATA).
+NOTE: Deleting WORK.TEMP0 (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.16 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   data interv1;
+MPRINT(RESULTS):   merge interv1_all _ref_;
+MPRINT(RESULTS):   by _sample_;
+MPRINT(RESULTS):   if pDref^=0 then rr=pd /pDref;
+MPRINT(RESULTS):   if pDref^=0 then rd=pd - pDref;
+MPRINT(RESULTS):   if rd^=. and rd^=0 then nnt = 1/rd;
+MPRINT(RESULTS):   *logrr=log(rr);
+MPRINT(RESULTS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.INTERV1_ALL.
+NOTE: There were 1 observations read from the data set WORK._REF_.
+NOTE: The data set WORK.INTERV1 has 1 observations and 32 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.83 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   data fin;
+MPRINT(RESULTS):   set fin interv1;
+MPRINT(RESULTS):   if _sample_=0;
+MPRINT(RESULTS):   if int=. then int=1;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.FIN.
+NOTE: There were 1 observations read from the data set WORK.INTERV1.
+NOTE: The data set WORK.FIN has 2 observations and 48 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(RESULTS):   proc univariate data=interv1 noprint;
+MPRINT(RESULTS):   where _sample_ ne 0;
+MPRINT(RESULTS):   var pd rr rd nnt;
+51                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(RESULTS):   output out = temp1 mean = pd_mean RR_mean RD_mean NNT_mean std = 
+pd_std RR_std RD_std NNT_std pctlpre = pd_ RR_ RD_ NNT_ pctlname = llim95 ulim95 
+pctlpts = 2.5 97.5;
+MPRINT(RESULTS):   run;
+
+NOTE: No observations were selected from data set WORK.INTERV1.
+NOTE: The data set WORK.TEMP1 has 0 observations and 16 variables.
+NOTE: PROCEDURE UNIVARIATE used (Total process time):
+      real time           0.30 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   data temp1;
+MPRINT(RESULTS):   set temp1;
+MPRINT(RESULTS):   int = 1;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 0 observations read from the data set WORK.TEMP1.
+NOTE: The data set WORK.TEMP1 has 0 observations and 17 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.24 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   data fin;
+MPRINT(RESULTS):   merge fin temp1;
+MPRINT(RESULTS):   by int;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 2 observations read from the data set WORK.FIN.
+NOTE: There were 0 observations read from the data set WORK.TEMP1.
+NOTE: The data set WORK.FIN has 2 observations and 48 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.08 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(RESULTS):   proc datasets library=work nolist;
+MPRINT(RESULTS):   delete interv1 interv1_all temp1;
+MPRINT(RESULTS):   quit;
+
+NOTE: Deleting WORK.INTERV1 (memtype=DATA).
+NOTE: Deleting WORK.INTERV1_ALL (memtype=DATA).
+NOTE: Deleting WORK.TEMP1 (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.12 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   data finfin;
+MPRINT(RESULTS):   set fin;
+MPRINT(RESCALEROUND):   obsp= round(0.0425068537*10000)/100;
+52                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(RESCALEROUND):   call symput('obspm',obsp);
+MPRINT(RESCALEROUND):   pd = round(pd*10000)/100;
+MPRINT(RESCALEROUND):   pd_mean = round(pd_mean*10000)/100;
+MPRINT(RESCALEROUND):   pd_std = round(pd_std*10000)/100;
+MPRINT(RESCALEROUND):   pd_ulim95 = round(pd_ulim95*10000)/100;
+MPRINT(RESCALEROUND):   pd_llim95 = round(pd_llim95*10000)/100;
+MPRINT(RESCALEROUND):   RD = round(RD*10000)/100;
+MPRINT(RESCALEROUND):   RD_mean = round(RD_mean*10000)/100;
+MPRINT(RESCALEROUND):   RD_std = round(RD_std*10000)/100;
+MPRINT(RESCALEROUND):   RD_ulim95 = round(RD_ulim95*10000)/100;
+MPRINT(RESCALEROUND):   RD_llim95 = round(RD_llim95*10000)/100;
+MPRINT(RESCALEROUND):   NNT = round(NNT);
+MPRINT(RESCALEROUND):   NNT_mean = round(NNT_mean);
+MPRINT(RESCALEROUND):   NNT_std = round(NNT_std);
+MPRINT(RESCALEROUND):   NNT_ulim95 = round(NNT_ulim95);
+MPRINT(RESCALEROUND):   NNT_llim95 = round(NNT_llim95);
+MPRINT(RESCALEROUND):   RR = round(RR*100)/100;
+MPRINT(RESCALEROUND):   RR_ulim95 = round(RR_ulim95*100)/100;
+MPRINT(RESCALEROUND):   RR_llim95 = round(RR_llim95*100)/100;
+MPRINT(RESCALEROUND):   intervened = round(intervened*10000)/100;
+MPRINT(RESCALEROUND):   averinterv = round(averinterv*10000)/100;
+MPRINT(RESULTS):  ;
+MPRINT(LABELS):   label pD_ulim95 = 'Upper limit 95% CI';
+MPRINT(LABELS):   label pD_llim95 = 'Lower limit 95% CI';
+MPRINT(LABELS):   label RR_ulim95 = 'Upper limit 95% CI';
+MPRINT(LABELS):   label RR_llim95 = 'Lower limit 95% CI';
+MPRINT(LABELS):   label RD_ulim95 = 'Upper limit 95% CI';
+MPRINT(LABELS):   label RD_llim95 = 'Lower limit 95% CI';
+MPRINT(LABELS):   label intervened = '% Intervened On';
+MPRINT(LABELS):   label averinterv = 'Aver % Intervened On';
+MPRINT(LABELS):   label int = 'Interv.';
+MPRINT(LABELS):   label int2 = 'Description';
+MPRINT(LABELS):   label pD = 'Risk (%)';
+MPRINT(LABELS):   label pD_std = 'Bootstrap Risk SE';
+MPRINT(LABELS):   label pD_mean = 'Bootstrap Risk Mean';
+MPRINT(LABELS):   label rr = 'Risk ratio';
+MPRINT(LABELS):   label RD = 'Risk difference';
+MPRINT(LABELS):   label NNT = '# Needed to Treat';
+MPRINT(LABELS):   label NNT_ulim95 = 'Upper limit 95% CI';
+MPRINT(LABELS):   label NNT_llim95 = 'Lower limit 95% CI';
+MPRINT(RESULTS):  ;
+MPRINT(RESULTS):   run;
+
+NOTE: Numeric values have been converted to character values at the places given by: 
+      (Line):(Column).
+      7707:69   
+NOTE: Missing values were generated as a result of performing an operation on missing 
+      values.
+      Each place is given by: (Number of times) at (Line):(Column).
+      2 at 7707:124   2 at 7707:139   2 at 7707:146   2 at 7707:167   2 at 7707:181
+      2 at 7707:188   2 at 7707:215   2 at 7707:232   2 at 7707:239   2 at 7707:17
+      2 at 7707:34    2 at 7707:41    2 at 7707:94    2 at 7707:107   2 at 7707:114
+53                                   The SAS System          12:48 Monday, July 29, 2019
+
+      2 at 7707:133   2 at 7707:145   2 at 7707:152   2 at 7707:178   2 at 7707:193
+      2 at 7707:200   2 at 7707:221   2 at 7707:236   2 at 7707:243   1 at 7707:16
+      2 at 7707:43    2 at 7707:74    2 at 7707:119   2 at 7707:157   2 at 7707:50
+      2 at 7707:65    2 at 7707:70    2 at 7707:94    2 at 7707:109   2 at 7707:114
+NOTE: There were 2 observations read from the data set WORK.FIN.
+NOTE: The data set WORK.FINFIN has 2 observations and 48 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+
+
+MPRINT(RESULTS):   title4 'PREDICTED RISK UNDER SEVERAL INTERVENTIONS';
+MPRINT(RESULTS):   proc print data=finfin noobs label double;
+MPRINT(RESULTS):   var int int2;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 2 observations read from the data set WORK.FINFIN.
+NOTE: The PROCEDURE PRINT printed page 15.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   title6 "Observed risk= 4.25 % , Hazard Ratio between interventions 0 
+and 1 is    0.918 ";
+MPRINT(RESULTS):   title7 "Data= sample, Sample size= 1000, Monte Carlo sample size= 
+1000";
+MPRINT(RESULTS):   title8 "Number of bootstrap samples= 0";
+MPRINT(RESULTS):   title9 "Reference intervention is 0";
+MPRINT(RESULTS):   proc print data=finfin noobs label double;
+MPRINT(RESULTS):   var int pd pd_llim95 pd_ulim95 rr rr_llim95 rr_ulim95 pd_mean pd_std 
+intervened averinterv;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 2 observations read from the data set WORK.FINFIN.
+NOTE: The PROCEDURE PRINT printed page 16.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   proc print data=finfin noobs label double;
+MPRINT(RESULTS):   var int pd pd_llim95 pd_ulim95 rd rd_llim95 rd_ulim95 nnt nnt_llim95 
+nnt_ulim95;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 2 observations read from the data set WORK.FINFIN.
+NOTE: The PROCEDURE PRINT printed page 17.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+54                                   The SAS System          12:48 Monday, July 29, 2019
+
+      
+
+MPRINT(RESULTS):   data ausc (keep = _sample_ int ausc6 ) ;
+MPRINT(RESULTS):   set survdata_all (keep = int _sample_ surv0 - surv6 ) ;
+MPRINT(RESULTS):   array surv{*} surv1 - surv6 ;
+MPRINT(RESULTS):   array ausc{*} ausc1 - ausc6 ;
+MPRINT(RESULTS):   ausc1 = surv0 ;
+MPRINT(RESULTS):   do i = 2 to 6 ;
+MPRINT(RESULTS):   ausc[i]=ausc[i-1]+surv[i];
+MPRINT(RESULTS):   end;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 2 observations read from the data set WORK.SURVDATA_ALL.
+NOTE: The data set WORK.AUSC has 2 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.06 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   proc transpose data=ausc out=drmst (drop= _NAME_) prefix=rmst;
+MPRINT(RESULTS):   var ausc6;
+MPRINT(RESULTS):   id int ;
+MPRINT(RESULTS):   by _sample_;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 2 observations read from the data set WORK.AUSC.
+NOTE: The data set WORK.DRMST has 1 observations and 3 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.14 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   data ausc ;
+MPRINT(RESULTS):   set ausc (where = (_sample_ = 0));
+MPRINT(RESULTS):   run;
+
+NOTE: There were 2 observations read from the data set WORK.AUSC.
+      WHERE _sample_=0;
+NOTE: The data set WORK.AUSC has 2 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   data drmst ;
+MPRINT(RESULTS):   set drmst ;
+MPRINT(RESULTS):   array drmst{*} drmst0 - drmst1 ;
+MPRINT(RESULTS):   array rmst{*} rmst0 - rmst1 ;
+MPRINT(RESULTS):   do i = 1 to 2;
+MPRINT(RESULTS):   drmst[i] = rmst[i] - rmst0 ;
+MPRINT(RESULTS):   end;
+MPRINT(RESULTS):   drop i ;
+55                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(RESULTS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.DRMST.
+NOTE: The data set WORK.DRMST has 1 observations and 5 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   proc univariate data=drmst noprint;
+MPRINT(RESULTS):   where _sample_ ne 0;
+MPRINT(RESULTS):   var drmst0 - drmst1 ;
+MPRINT(RESULTS):   output out = drmst_stat mean = drmst0_mean drmst1_mean std = 
+drmst0_std drmst1_std pctlpre = drmst0_ drmst1_ pctlname = llim95 ulim95 pctlpts = 2.5 
+97.5;
+MPRINT(RESULTS):   run;
+
+NOTE: No observations were selected from data set WORK.DRMST.
+NOTE: The data set WORK.DRMST_STAT has 0 observations and 8 variables.
+NOTE: PROCEDURE UNIVARIATE used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(RESULTS):   proc univariate data=drmst noprint;
+MPRINT(RESULTS):   where _sample_ ne 0;
+MPRINT(RESULTS):   var rmst0 - rmst1 ;
+MPRINT(RESULTS):   output out = rmst_stat mean =rmst0_meanrmst1_mean std = rmst0_std 
+rmst1_std pctlpre = rmst0_ rmst1_ pctlname = llim95 ulim95 pctlpts = 2.5 97.5;
+MPRINT(RESULTS):   run;
+
+NOTE: No observations were selected from data set WORK.DRMST.
+NOTE: The data set WORK.RMST_STAT has 0 observations and 8 variables.
+NOTE: PROCEDURE UNIVARIATE used (Total process time):
+      real time           0.09 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   data drmst_out ;
+MPRINT(RESULTS):   merge drmst (where = (_sample_ = 0)) drmst_stat rmst_stat ;
+MPRINT(RESULTS):   label rmst = 'Restricted mean survival time';
+MPRINT(RESULTS):   label rmst_ub = 'Upper limit 95% CI';
+MPRINT(RESULTS):   label rmst_lb = 'Lower limit 95% CI';
+MPRINT(RESULTS):   label drmst = 'Restricted mean survival time difference';
+MPRINT(RESULTS):   label drmst_ub = 'Upper limit 95% CI';
+MPRINT(RESULTS):   label drmst_lb = 'Lower limit 95% CI';
+MPRINT(RESULTS):   int = 0 ;
+MPRINT(RESULTS):   rmst = round(rmst0,0.001) ;
+MPRINT(RESULTS):   rmst_mean = round(rmst0_mean, 0.001 ) ;
+MPRINT(RESULTS):   rmst_std = round(rmst0_std,0.001) ;
+MPRINT(RESULTS):   rmst_lb = round(rmst0_llim95,0.001) ;
+MPRINT(RESULTS):   rmst_ub = round(rmst0_ulim95,0.001) ;
+56                                   The SAS System          12:48 Monday, July 29, 2019
+
+MPRINT(RESULTS):   drmst = round(drmst0,0.001) ;
+MPRINT(RESULTS):   drmst_mean = round(drmst0_mean,0.001) ;
+MPRINT(RESULTS):   drmst_std = round(drmst0_std,0.001) ;
+MPRINT(RESULTS):   drmst_lb = round(drmst0_llim95,0.001) ;
+MPRINT(RESULTS):   drmst_ub = round(drmst0_ulim95,0.001) ;
+MPRINT(RESULTS):   output ;
+MPRINT(RESULTS):   int = 1 ;
+MPRINT(RESULTS):   rmst = round(rmst1,0.001) ;
+MPRINT(RESULTS):   rmst_mean = round(rmst1_mean, 0.001 ) ;
+MPRINT(RESULTS):   rmst_std = round(rmst1_std,0.001) ;
+MPRINT(RESULTS):   rmst_lb = round(rmst1_llim95,0.001) ;
+MPRINT(RESULTS):   rmst_ub = round(rmst1_ulim95,0.001) ;
+MPRINT(RESULTS):   drmst = round(drmst1,0.001) ;
+MPRINT(RESULTS):   drmst_mean = round(drmst1_mean,0.001) ;
+MPRINT(RESULTS):   drmst_std = round(drmst1_std,0.001) ;
+MPRINT(RESULTS):   drmst_lb = round(drmst1_llim95,0.001) ;
+MPRINT(RESULTS):   drmst_ub = round(drmst1_ulim95,0.001) ;
+MPRINT(RESULTS):   output ;
+MPRINT(RESULTS):   keep int rmst rmst_mean rmst_std rmst_lb rmst_ub drmst drmst_mean 
+drmst_std drmst_lb drmst_ub ;
+MPRINT(RESULTS):   run;
+
+NOTE: Missing values were generated as a result of performing an operation on missing 
+      values.
+      Each place is given by: (Number of times) at (Line):(Column).
+      1 at 7707:107   1 at 7707:167   1 at 7707:223   1 at 7707:27    1 at 7707:140
+      1 at 7707:200   1 at 7707:4     1 at 7707:65    1 at 7707:107   1 at 7707:167
+      1 at 7707:223   1 at 7707:27    1 at 7707:140   1 at 7707:200   1 at 7707:4
+      1 at 7707:65    
+NOTE: There were 1 observations read from the data set WORK.DRMST.
+      WHERE _sample_=0;
+NOTE: There were 0 observations read from the data set WORK.DRMST_STAT.
+NOTE: There were 0 observations read from the data set WORK.RMST_STAT.
+NOTE: The data set WORK.DRMST_OUT has 2 observations and 11 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   title4 "RESTRICTED MEAN SURVIVAL TIME AFTER 6 TIME POINTS";
+MPRINT(RESULTS):   title7 "Data= sample, Sample size= 1000, Monte Carlo sample size= 
+1000";
+MPRINT(RESULTS):   title8 "Number of bootstrap samples= 0";
+MPRINT(RESULTS):   title9 "Reference intervention is 0";
+MPRINT(RESULTS):   proc print data = drmst_out noobs label double ;
+MPRINT(RESULTS):   var int rmst rmst_lb rmst_ub drmst drmst_lb drmst_ub ;
+MPRINT(RESULTS):   run;
+
+NOTE: There were 2 observations read from the data set WORK.DRMST_OUT.
+NOTE: The PROCEDURE PRINT printed page 18.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.01 seconds
+57                                   The SAS System          12:48 Monday, July 29, 2019
+
+      cpu time            0.00 seconds
+      
+
+MPRINT(RESULTS):   title;
+MPRINT(RESULTS):   proc datasets library=work nolist;
+MPRINT(RESULTS):   delete _paramdata_ _simuldata_ _inputd_ _beta_ _ref_ fin finfin ausc 
+drmst drmst_stat rmst_stat drmst_out ;
+MPRINT(RESULTS):   ;
+MPRINT(RESULTS):   quit;
+
+NOTE: Deleting WORK._PARAMDATA_ (memtype=DATA).
+NOTE: Deleting WORK._SIMULDATA_ (memtype=DATA).
+NOTE: Deleting WORK._INPUTD_ (memtype=DATA).
+NOTE: Deleting WORK._BETA_ (memtype=DATA).
+NOTE: Deleting WORK._REF_ (memtype=DATA).
+NOTE: Deleting WORK.FIN (memtype=DATA).
+NOTE: Deleting WORK.FINFIN (memtype=DATA).
+NOTE: Deleting WORK.AUSC (memtype=DATA).
+NOTE: Deleting WORK.DRMST (memtype=DATA).
+NOTE: Deleting WORK.DRMST_STAT (memtype=DATA).
+NOTE: Deleting WORK.RMST_STAT (memtype=DATA).
+NOTE: Deleting WORK.DRMST_OUT (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.28 seconds
+      cpu time            0.01 seconds
+      
+
+MPRINT(GFORMULA):  ;
+MPRINT(GFORMULA):   proc datasets library = work memtype = (data view) nolist ;
+MPRINT(GFORMULA):   delete tmpids _calchazard_ simulated0 simulated1 ;
+MPRINT(GFORMULA):   quit;
+
+NOTE: Deleting WORK.TMPIDS (memtype=DATA).
+NOTE: Deleting WORK._CALCHAZARD_ (memtype=DATA).
+NOTE: Deleting WORK.SIMULATED0 (memtype=VIEW).
+NOTE: Deleting WORK.SIMULATED1 (memtype=VIEW).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.02 seconds
+      
+
+MPRINT(GFORMULA):   ;
+MPRINT(GFORMULA):  ;
+7708       
+7709       
+
+NOTE: SAS Institute Inc., SAS Campus Drive, Cary, NC USA 27513-2414
+NOTE: The SAS System used:
+      real time           20.88 seconds
+      cpu time            1.97 seconds
+      
+                                  Means of SAMPLE data   12:48 Monday, July 29, 2019   1
+
+                                  The MEANS Procedure
+
+    Variable       N            Mean         Std Dev         Minimum         Maximum
+    --------------------------------------------------------------------------------
+    baseage     4741      46.7800042       7.3211091      35.0000000      59.0000000
+    censlost    4741       0.0455600       0.2085509               0       1.0000000
+    dia         4311       0.0083507       0.0910105               0       1.0000000
+    dead        4525       0.0472928       0.2122879               0       1.0000000
+    id          4741     502.9335583     290.7648847       1.0000000         1000.00
+    time        4741       2.2164100       1.6933703               0       5.0000000
+    hbp         4741       0.6534486       0.4759215               0       1.0000000
+    hbp_l1      4741       0.5692892       0.4952280               0       1.0000000
+    hbp_l2      4741       0.4608732       0.4985193               0       1.0000000
+    act         4741      24.5705547      20.2416501               0     116.0000000
+    act_l1      4741      24.3961190      20.3813748               0     122.0000000
+    act_l2      4741      24.4317655      20.5262165               0     141.0000000
+    --------------------------------------------------------------------------------
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019   2
+
+                                 The LOGISTIC Procedure
+
+                                   Model Information
+
+                     Data Set                      WORK.PARAM      
+                     Response Variable             dia             
+                     Number of Response Levels     2               
+                     Weight Variable               _weight_        
+                     Model                         binary logit    
+                     Optimization Technique        Fisher's scoring
+
+
+                        Number of Observations Read        4741
+                        Number of Observations Used        4311
+                        Sum of Weights Read                4741
+                        Sum of Weights Used                4311
+
+
+                                    Response Profile
+ 
+                   Ordered                      Total            Total
+                     Value          dia     Frequency           Weight
+
+                         1            1            36          36.0000
+                         2            0          4275        4275.0000
+
+                             Probability modeled is dia=1.
+
+
+                                Model Convergence Status
+
+                     Convergence criterion (GCONV=1E-8) satisfied.          
+
+
+                        Analysis of Maximum Likelihood Estimates
+ 
+                                             Standard          Wald
+       Parameter           DF    Estimate       Error    Chi-Square    Pr > ChiSq
+
+       Intercept            1     -3.7675      1.2779        8.6924        0.0032
+       baseage              1     -0.0260      0.0234        1.2336        0.2667
+       time_1               1     -0.1196      0.7672        0.0243        0.8761
+       time_2               1     -0.1441      0.6845        0.0443        0.8333
+       time_3               1     -1.2030      0.8036        2.2411        0.1344
+       time_4               1     -1.1851      0.8071        2.1562        0.1420
+       time_5               1     -0.0647      0.5892        0.0121        0.9125
+       hbp                  1     -0.1216      1.2500        0.0095        0.9225
+       tshbp_inter          1      0.4163      0.8130        0.2622        0.6086
+       tshbp_inter_spl1     1     -0.9233      4.3673        0.0447        0.8326
+       tshbp_inter_spl2     1      1.0432      7.8835        0.0175        0.8947
+       act_l1               1    -0.00784      0.0370        0.0450        0.8320
+       act                  1     -0.0678      0.0648        1.0939        0.2956
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019   3
+
+                                 The LOGISTIC Procedure
+
+                        Analysis of Maximum Likelihood Estimates
+ 
+                                             Standard          Wald
+       Parameter           DF    Estimate       Error    Chi-Square    Pr > ChiSq
+
+       acts_l1              1    0.000211     0.00118        0.0321        0.8578
+       acts                 1     0.00360     0.00286        1.5808        0.2086
+       actc_l1              1    -3.39E-7    9.294E-6        0.0013        0.9709
+       actc                 1    -0.00004    0.000032        1.6628        0.1972
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019   4
+
+                                 The LOGISTIC Procedure
+
+                                   Model Information
+
+                     Data Set                      WORK.PARAM      
+                     Response Variable             dead            
+                     Number of Response Levels     2               
+                     Model                         binary logit    
+                     Optimization Technique        Fisher's scoring
+
+
+                        Number of Observations Read        4741
+                        Number of Observations Used        4525
+
+
+                                    Response Profile
+ 
+                           Ordered                      Total
+                             Value         dead     Frequency
+
+                                 1            1           214
+                                 2            0          4311
+
+                             Probability modeled is dead=1.
+
+
+                                Model Convergence Status
+
+                     Convergence criterion (GCONV=1E-8) satisfied.          
+
+
+                        Analysis of Maximum Likelihood Estimates
+ 
+                                             Standard          Wald
+       Parameter           DF    Estimate       Error    Chi-Square    Pr > ChiSq
+
+       Intercept            1     -2.6520      0.5259       25.4331        <.0001
+       baseage              1     0.00863     0.00957        0.8128        0.3673
+       time_1               1     -0.4855      0.2878        2.8469        0.0916
+       time_2               1     -0.5975      0.2865        4.3477        0.0371
+       time_3               1     -0.8680      0.3013        8.3007        0.0040
+       time_4               1     -0.4633      0.2846        2.6500        0.1035
+       time_5               1     -0.5582      0.2766        4.0711        0.0436
+       hbp                  1     -0.1800      0.5139        0.1227        0.7262
+       tshbp_inter          1     -0.0881      0.3478        0.0642        0.8000
+       tshbp_inter_spl1     1      1.2052      1.9495        0.3822        0.5364
+       tshbp_inter_spl2     1     -2.6207      3.5305        0.5510        0.4579
+       act_l1               1     0.00718      0.0142        0.2543        0.6141
+       act                  1     -0.0175      0.0168        1.0857        0.2974
+       acts_l1              1    -0.00038    0.000430        0.7692        0.3805
+       acts                 1    0.000486    0.000580        0.7024        0.4020
+       actc_l1              1    3.992E-6    3.156E-6        1.6005        0.2058
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019   5
+
+                                 The LOGISTIC Procedure
+
+                        Analysis of Maximum Likelihood Estimates
+ 
+                                             Standard          Wald
+       Parameter           DF    Estimate       Error    Chi-Square    Pr > ChiSq
+
+       actc                 1    -3.09E-6    4.994E-6        0.3836        0.5357
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019   6
+
+                                 The LOGISTIC Procedure
+
+                                   Model Information
+
+                     Data Set                      WORK.PARAM      
+                     Response Variable             hbp             
+                     Number of Response Levels     2               
+                     Weight Variable               _weight_        
+                     Model                         binary logit    
+                     Optimization Technique        Fisher's scoring
+
+
+                        Number of Observations Read        1386
+                        Number of Observations Used        1386
+                        Sum of Weights Read                1386
+                        Sum of Weights Used                1386
+
+
+                                    Response Profile
+ 
+                   Ordered                      Total            Total
+                     Value          hbp     Frequency           Weight
+
+                         1            1           267         267.0000
+                         2            0          1119        1119.0000
+
+                             Probability modeled is hbp=1.
+
+
+                                Model Convergence Status
+
+                     Convergence criterion (GCONV=1E-8) satisfied.          
+
+
+                       Analysis of Maximum Likelihood Estimates
+ 
+                                         Standard          Wald
+          Parameter    DF    Estimate       Error    Chi-Square    Pr > ChiSq
+
+          Intercept     1     -1.3252      0.5085        6.7912        0.0092
+          baseage       1    -0.00598     0.00912        0.4297        0.5121
+          time_1        0           0           .         .             .    
+          time_2        1      0.0855      0.2638        0.1051        0.7458
+          time_3        1      0.1053      0.2725        0.1494        0.6991
+          time_4        1      0.5029      0.2757        3.3270        0.0682
+          time_5        1      0.0693      0.3077        0.0508        0.8217
+          act_l2        1     -0.0249      0.0159        2.4553        0.1171
+          act_l1        1     0.00568      0.0170        0.1116        0.7383
+          acts_l2       1    0.000773    0.000539        2.0558        0.1516
+          acts_l1       1    0.000047    0.000604        0.0060        0.9382
+          actc_l2       1    -5.73E-6     4.54E-6        1.5902        0.2073
+          actc_l1       1    -1.69E-6    5.431E-6        0.0970        0.7554
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019   7
+
+                                 The LOGISTIC Procedure
+
+                                   Model Information
+
+                     Data Set                      WORK.PARAM      
+                     Response Variable             zact            
+                     Number of Response Levels     2               
+                     Weight Variable               _weight_        
+                     Model                         binary logit    
+                     Optimization Technique        Fisher's scoring
+
+
+                        Number of Observations Read        3741
+                        Number of Observations Used        3741
+                        Sum of Weights Read                3741
+                        Sum of Weights Used                3741
+
+
+                                    Response Profile
+ 
+                   Ordered                      Total            Total
+                     Value         zact     Frequency           Weight
+
+                         1            1          2638        2638.0000
+                         2            0          1103        1103.0000
+
+                             Probability modeled is zact=1.
+
+
+                                Model Convergence Status
+
+                     Convergence criterion (GCONV=1E-8) satisfied.          
+
+
+                        Analysis of Maximum Likelihood Estimates
+ 
+                                             Standard          Wald
+       Parameter           DF    Estimate       Error    Chi-Square    Pr > ChiSq
+
+       Intercept            1      0.7714      0.2736        7.9505        0.0048
+       baseage              1     0.00597     0.00491        1.4753        0.2245
+       time_1               0           0           .         .             .    
+       time_2               1     -0.0912      0.1503        0.3682        0.5440
+       time_3               1     -0.1857      0.1521        1.4907        0.2221
+       time_4               1     -0.3178      0.1541        4.2508        0.0392
+       time_5               1     -0.0919      0.1415        0.4217        0.5161
+       hbp                  1     -0.3315      0.2958        1.2558        0.2624
+       tshbp_inter          1      0.1225      0.1754        0.4875        0.4851
+       tshbp_inter_spl1     1     -0.0448      0.9342        0.0023        0.9618
+       tshbp_inter_spl2     1     -0.2164      1.6865        0.0165        0.8979
+       act_l2               1    -0.00189     0.00840        0.0507        0.8218
+       act_l1               1    -0.00207     0.00836        0.0614        0.8043
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019   8
+
+                                 The LOGISTIC Procedure
+
+                        Analysis of Maximum Likelihood Estimates
+ 
+                                             Standard          Wald
+       Parameter           DF    Estimate       Error    Chi-Square    Pr > ChiSq
+
+       acts_l2              1    -6.09E-6    0.000285        0.0005        0.9829
+       acts_l1              1    0.000157    0.000284        0.3060        0.5802
+       actc_l2              1    5.362E-7    2.401E-6        0.0499        0.8233
+       actc_l1              1    -1.48E-6    2.408E-6        0.3799        0.5377
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019   9
+
+                                   The REG Procedure
+                                     Model: MODEL1
+                               Dependent Variable: lact 
+
+                        Number of Observations Read        2638
+                        Number of Observations Used        2638
+
+
+                  Root MSE              0.40459    R-Square     0.0047
+                  Dependent Mean        3.47232    Adj R-Sq    -0.0010
+                  Coeff Var            11.65195                       
+
+
+                                  Parameter Estimates
+ 
+                                  Parameter       Standard
+      Variable            DF       Estimate          Error    t Value    Pr > |t|
+
+      Intercept            1        3.42334        0.05954      57.49      <.0001
+      baseage              1     0.00033721        0.00108       0.31      0.7549
+      time_1               0              0              .        .         .    
+      time_2               1        0.02180        0.03195       0.68      0.4952
+      time_3               1        0.00233        0.03233       0.07      0.9425
+      time_4               1        0.02722        0.03318       0.82      0.4120
+      time_5               1     0.00060362        0.03006       0.02      0.9840
+      hbp                  1        0.05970        0.06758       0.88      0.3771
+      tshbp_inter          1       -0.02959        0.03970      -0.75      0.4562
+      tshbp_inter_spl1     1        0.14856        0.20842       0.71      0.4760
+      tshbp_inter_spl2     1       -0.26638        0.37503      -0.71      0.4776
+      act_l2               1       -0.00182        0.00180      -1.01      0.3111
+      act_l1               1        0.00471        0.00185       2.54      0.0111
+      acts_l2              1     0.00006847     0.00005988       1.14      0.2530
+      acts_l1              1    -0.00015704     0.00006306      -2.49      0.0128
+      actc_l2              1    -5.40107E-7    4.929605E-7      -1.10      0.2733
+      actc_l1              1     0.00000123    5.388548E-7       2.29      0.0222
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019  10
+
+                                  The PHREG Procedure
+
+                                   Model Information
+
+                           Data Set                 WORK.BOTH
+                           Dependent Variable       newtime  
+                           Status Variable          event    
+                           Event of Interest        1        
+                           Competing Event                   
+                           Censored Value           0        
+
+
+                        Number of Observations Read        2000
+                        Number of Observations Used          89
+
+
+                              Summary of Failure Outcomes
+ 
+                                 Event of    Competing
+                        Total    Interest        Event    Censored
+
+                           89          89            0           0
+
+
+                                   Convergence Status
+
+                     Convergence criterion (GCONV=1E-8) satisfied.          
+
+
+                                 Model Fit Statistics
+ 
+                                         Without           With
+                        Criterion     Covariates     Covariates
+
+                        -2 LOG L         679.663        679.504
+                        AIC              679.663        681.504
+                        SBC              679.663        683.993
+
+
+                        Testing Global Null Hypothesis: BETA=0
+ 
+                Test                 Chi-Square       DF     Pr > ChiSq
+
+                Wald                     0.2837        1         0.5943
+
+
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019  11
+
+                                  The PHREG Procedure
+
+                       Analysis of Maximum Likelihood Estimates
+ 
+                Parameter   Standard                         Hazard  95% Hazard Ratio
+  Parameter DF   Estimate      Error Chi-Square Pr > ChiSq    Ratio Confidence Limits
+
+  int        1   -0.08566    0.16081     0.2837     0.5943    0.918    0.670    1.258
+
+
+                    Subdistribution Hazards: Hazard Ratios for int
+ 
+                                      Point     95% Wald Confidence
+                    Description    Estimate           Limits
+
+                    int Unit=1        0.918       0.670       1.258
+                                    GFORMULA SAMPLE      12:48 Monday, July 29, 2019  12
+
+                                          Hazard
+                                           Ratio
+                                        --------
+                                           0.918
+                          mean, min, max under intervention 0                         13
+                                                             12:48 Monday, July 29, 2019
+
+                      Variable        Mean      Minimum    Maximum
+
+                      pd             0.0430    0.013665      0.080
+                      sdia1          0.0078    0.000001      0.033
+                      sdia2          0.0099    0.000000      0.050
+                      sdia3          0.0041    0.000000      0.028
+                      sdia4          0.0045    0.000000      0.016
+                      sdia5          0.0130    0.000000      0.035
+                      sdia6          0.0128    0.000000      0.073
+                      intervened     0.0000    0.000000      0.000
+                      averinterv     0.0000    0.000000      0.000
+                      shbp1          0.4760    0.000000      1.000
+                      shbp2          0.5660    0.000000      1.000
+                      shbp3          0.6550    0.000000      1.000
+                      shbp4          0.7470    0.000000      1.000
+                      shbp5          0.7820    0.000000      1.000
+                      shbp6          0.8150    0.000000      1.000
+                      sact1         24.2730    0.000000     96.000
+                      sact2         25.9066    0.000000    102.603
+                      sact3         25.7907    0.000000    116.000
+                      sact4         23.3713    0.000000     93.838
+                      sact5         25.8129    0.000000    116.000
+                      sact6         24.4387    0.000000    116.000
+                          mean, min, max under intervention 1                         14
+                                                             12:48 Monday, July 29, 2019
+
+                      Variable        Mean     Minimum    Maximum
+
+                      pd             0.0466     0.0172      0.085
+                      sdia1          0.0085     0.0000      0.033
+                      sdia2          0.0105     0.0000      0.049
+                      sdia3          0.0045     0.0000      0.018
+                      sdia4          0.0049     0.0000      0.030
+                      sdia5          0.0140     0.0000      0.042
+                      sdia6          0.0138     0.0000      0.077
+                      intervened     0.9970     0.0000      1.000
+                      averinterv     0.5893     0.0000      1.000
+                      shbp1          0.4760     0.0000      1.000
+                      shbp2          0.5830     0.0000      1.000
+                      shbp3          0.6600     0.0000      1.000
+                      shbp4          0.7360     0.0000      1.000
+                      shbp5          0.7940     0.0000      1.000
+                      shbp6          0.8300     0.0000      1.000
+                      sact1         35.7700    30.0000     96.000
+                      sact2         36.6814    30.0000    116.000
+                      sact3         36.1710    30.0000    116.000
+                      sact4         36.1941    30.0000    104.582
+                      sact5         35.9186    30.0000    114.747
+                      sact6         36.0969    30.0000    111.804
+                                                         12:48 Monday, July 29, 2019  15
+                                            
+                                            
+                       PREDICTED RISK UNDER SEVERAL INTERVENTIONS
+
+     Interv.    Description
+
+        0       Natural course                                                    
+
+        1       All subjects exercise at least 30 minutes per day in all intervals
+                                                         12:48 Monday, July 29, 2019  16
+                                            
+                                            
+                       PREDICTED RISK UNDER SEVERAL INTERVENTIONS
+                                            
+    Observed risk= 4.25 % , Hazard Ratio between interventions 0 and 1 is    0.918 
+             Data= sample, Sample size= 1000, Monte Carlo sample size= 1000
+                             Number of bootstrap samples= 0
+                              Reference intervention is 0
+
+              Lower  Upper        Lower  Upper                          %       Aver %
+        Risk  limit  limit  Risk  limit  limit Bootstrap Bootstrap Intervened Intervened
+Interv.  (%) 95% CI 95% CI ratio 95% CI 95% CI Risk Mean  Risk SE      On         On
+
+   0    4.30    .      .    1.00    .      .       .         .         0.0        0.00  
+
+   1    4.66    .      .    1.08    .      .       .         .        99.7       58.93  
+                                                         12:48 Monday, July 29, 2019  17
+                                            
+                                            
+                       PREDICTED RISK UNDER SEVERAL INTERVENTIONS
+                                            
+    Observed risk= 4.25 % , Hazard Ratio between interventions 0 and 1 is    0.918 
+             Data= sample, Sample size= 1000, Monte Carlo sample size= 1000
+                             Number of bootstrap samples= 0
+                              Reference intervention is 0
+
+                  Lower   Upper               Lower   Upper             Lower   Upper
+           Risk   limit   limit     Risk      limit   limit  # Needed   limit   limit
+  Interv.   (%)  95% CI  95% CI  difference  95% CI  95% CI  to Treat  95% CI  95% CI
+
+     0     4.30     .       .       0.00        .       .         .       .       .  
+
+     1     4.66     .       .       0.36        .       .       280       .       .  
+                                                         12:48 Monday, July 29, 2019  18
+                                            
+                                            
+                   RESTRICTED MEAN SURVIVAL TIME AFTER 6 TIME POINTS
+                                            
+                                            
+             Data= sample, Sample size= 1000, Monte Carlo sample size= 1000
+                             Number of bootstrap samples= 0
+                              Reference intervention is 0
+
+                                                 Restricted
+               Restricted                           mean
+                  mean        Lower     Upper     survival      Lower     Upper
+                survival      limit     limit       time        limit     limit
+        int       time       95% CI    95% CI    difference    95% CI    95% CI
+
+         0        5.032         .         .         0.000         .         .  
+
+         1        5.063         .         .         0.031         .         .  
