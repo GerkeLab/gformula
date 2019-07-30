@@ -31,78 +31,6 @@ example1 <- read_csv("example1.csv")
 #    seed= 9458, nsamples = 0, numint=1
 # );
 
-
-# R call ------------------------------------------------------------------
-
-# time 1: we will use variables measured at time 0 to predict the levels of
-# variables measured at time 1
-# Note: somewhere along the way, we need to incorporate the lag option which
-# will be variable-specific (e.g. some will have lag==2, others lag==1)
-t1 <- example1 %>% filter(time %in% c(0, 1))
-
-# verify that baseage remains constant across t0 and t1
-t1 %>%
-  distinct(id, baseage) %>%
-  count(id, baseage, sort = TRUE) %>%
-  count(n)
-
-# make a flat file to permit use of glm() and similar models
-t1_flat <- t1 %>% tidyr::pivot_wider(
-  id_cols = c(id, baseage),
-  names_from = time,
-  values_from = c(-id, -baseage)
-)
-
-# note that the user's ordering of cov1, cov2, etc impacts the covariate
-# adjustment/Markov decomposition ordering!
-# details in Step 1a of algorithm outline in documentation.pdf
-
-# fit model for hbp_1
-# note that this is covXotype = 2:
-# Fits model only to records where the first lagged value of covX=0.
-# Should be used for binary covariates that, once they switch from 0 to 1,
-# they stay 1 (e.g. indicator of diabetes diagnosis)
-hbp1_fit <- glm(
-  hbp_1 ~ baseage,
-  family = "binomial",
-  data = t1_flat %>% filter(hbp_0 == 0)
-)
-
-# fit model for act_1
-# note that this is covXotype = 4: see p 10 of documentation.pdf
-# In short, it's a two-stage model, where the first estimates
-# whether act_1==0. If not, it's a log-linear model.
-act1_fit_z <- glm(
-  act_1 > 0 ~ baseage + hbp_0,
-  family = "binomial",
-  data = t1_flat
-)
-act1_fit_I <- lm(
-  log(act_1) ~ baseage + hbp_0,
-  data = t1_flat %>% filter(act_1 > 0)
-)
-
-# fit model for competing risk (death)
-dead1_fit <- glm(
-  dead_1 ~ baseage + hbp_0 + act_0,
-  family = "binomial",
-  data = t1_flat
-)
-
-# fit model for event of interest (diabetes)
-# Note: subset to those without competing event at time 1,
-# need to circle back to methods papers to ensure this is correct
-# but it seems to be from Keil, 2014 Figure 2
-dia1_fit <- glm(
-  dia_1 ~ baseage + hbp_0 + act_0,
-  family = "binomial",
-  data = t1_flat %>% filter(dead_1 == 0)
-)
-
-
-# Garrick -----------------------------------------------------------------
-
-
 # ---- Functions ----
 
 model_formula <- function(outcome, predictors) {
@@ -217,7 +145,7 @@ example_ids <- c("id", "baseage")
 #' the output time step).
 example_nested$hbp <-
   example_nested %>%
-  pmap(fit_step, outcome = "hbp", predictors = "baseage", filter_at_step = hbp == 0, id = example_ids)
+  pmap(fit_step, outcome = "hbp", predictors = "baseage + hbp", filter_at_step = hbp == 0, id = example_ids)
 
 #' The `act` covariate is of type 4 (borrowing terminology from `gformula.sas`),
 #' and `fit_step()` returns a list of models. The model in `.$zero` estimates
@@ -225,7 +153,7 @@ example_nested$hbp <-
 #' it is non-zero. (We can change this structure/naming as needed.)
 example_nested$act <-
   example_nested %>%
-  pmap(fit_step, outcome = "act", predictors = "baseage + hbp", cov_type = 4, id = example_ids)
+  pmap(fit_step, outcome = "act", predictors = "baseage + hbp + act", cov_type = 4, id = example_ids)
 
 example_nested$dead <-
   example_nested %>%
@@ -236,3 +164,42 @@ example_nested$dia <-
   pmap(fit_step, outcome = "dia", predictors = "baseage + hbp + act", id = example_ids, filter_at_step = dead == 0)
 
 example_nested
+
+
+# Monte Carlo simulation --------------------------------------------------
+
+# set up a function to get a vector of 0/1 from a vector of probabilities
+sample_bin <- function(p) {
+  map_int(p, ~ sample(0:1, 1, prob = c(1 - .x, .x)))
+}
+
+# generate a large n which is representative of the population at baseline
+pop <- example1 %>%
+  filter(time == 0) %>%
+  select(-contains("_l")) %>%
+  sample_n(size = 10000, replace = TRUE) %>%
+  rename(hbp_T00 = hbp, act_T00 = act)
+  # the rename not needed when we use the actual nested structure!
+
+
+pop <- pop %>%
+  # estimate hbp at time 1
+  mutate(hbp1 =
+           predict(example_nested$hbp[[1]], newdata = ., type = "response") %>%
+           sample_bin()
+         ) %>%
+  # estimate act at time 1
+  mutate(act1 =
+           predict(example_nested$act[[1]]$zero, newdata = ., type = "response") %>%
+           sample_bin()
+         ) %>%
+  # use the loglinear model when act1 > 0
+  mutate(act1 = ifelse(act1 > 0,
+                      predict(example_nested$act[[1]]$nzero, newdata = .) +
+                        rnorm(as.integer(tally(.)), 0, sd(example_nested$act[[1]]$nzero$residuals)) %>%
+                        exp(),
+                      act1))
+# sanity check
+ggplot(pop) + geom_point(aes(x = act_T00, y = act1))
+
+
