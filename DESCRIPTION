@@ -1,18 +1,23 @@
 Package: gformula
-Version: 0.0.0.9000
 Title: g -formula
-Description: Estimate causal effects via the parametric g-formula.
-Authors@R: person("Garrick", "Aden-Buie", email = "Garrick.Aden-Buie@moffitt.org", role = c("aut", "cre"))
+Version: 0.0.0.9001
+Authors@R: 
+    person(given = "Garrick",
+           family = "Aden-Buie",
+           role = c("aut", "cre"),
+           email = "Garrick.Aden-Buie@moffitt.org")
+Description: Estimate causal effects via the parametric
+    g-formula.
 License: MIT + file LICENSE
+URL: https://github.com/GerkeLab/gformula
+BugReports: https://github.com/GerkeLab/gformula/issues
+Imports: 
+    magrittr
+Suggests: 
+    spelling,
+    testthat
 Encoding: UTF-8
+Language: en-US
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.0
-Suggests: 
-    testthat,
-    spelling
-Language: en-US
-Imports: 
-    magrittr
-URL: https://github.com/GerkeLab/gformula
-BugReports: https://github.com/GerkeLab/gformula/issues
