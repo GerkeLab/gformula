@@ -1,6 +1,6 @@
 Package: gformula
 Title: g -formula
-Version: 0.0.0.9001
+Version: 0.0.0.9002
 Authors@R: 
     person(given = "Garrick",
            family = "Aden-Buie",

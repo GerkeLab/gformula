@@ -33,20 +33,20 @@ example1 <- read_csv("example1.csv")
 
 # ---- Functions ----
 
-model_formula <- function(outcome, predictors) {
+model_formula <- function(outcome,predictors) {
   rlang::new_formula(
     rlang::parse_expr(outcome),
     rlang::parse_expr(predictors)
   )
 }
 
-append_time_suffix <- function(x, time = 0, ...) UseMethod("append_time_suffix")
+append_time_suffix <- function(x,time=0,...) UseMethod("append_time_suffix")
 
-append_time_suffix.default <- function(x, time = 0) {
+append_time_suffix.default <- function(x,time=0) {
   paste0(x, sprintf("_T%02d", time))
 }
 
-append_time_suffix.data.frame <- function(x, time = 0, exclude = NULL) {
+append_time_suffix.data.frame <- function(x,time=0,exclude=NULL) {
   idx_names <- which(!names(x) %in% exclude)
   names(x)[idx_names] <- append_time_suffix(names(x)[idx_names], time)
   x
@@ -57,11 +57,11 @@ fit_step <- function(
   data_next,
   time,
   ...,
-  outcome = "hbp",
-  predictors = "baseage",
-  filter_at_step = NULL,
-  cov_type = 2,
-  id = c("id", "baseage")
+  outcome="hbp",
+  predictors="baseage",
+  filter_at_step=NULL,
+  cov_type=2,
+  id=c("id", "baseage")
 ) {
   # apply filter to data (current step)
   # append time suffix to outcome (+1) and predictors
@@ -69,7 +69,9 @@ fit_step <- function(
   # construct model formula
   # run model
 
-  if (is.null(data_next) || is.na(data_next) || !nrow(data_next)) return(NULL)
+  if (is.null(data_next) || is.na(data_next) || !nrow(data_next)) {
+    return(NULL)
+  }
 
   for (col in names(data)) {
     if (col %in% id) next
@@ -96,7 +98,6 @@ fit_step <- function(
     formula <- model_formula(outcome, predictors)
     model_call <- rlang::expr(glm(!!formula, data = data, family = "binomial"))
     eval(model_call)
-
   } else if (cov_type == 4) {
     # note that this is covXotype = 4: see p 10 of documentation.pdf
     # In short, it's a two-stage model, where the first estimates
@@ -143,23 +144,23 @@ example_ids <- c("id", "baseage")
 #' Models are returned into columns named after the variables they predict. They
 #' are stored in the row corresponding to the model's input data (rather than
 #' the output time step).
-example_nested$hbp <-
+example_nested$m_hbp <-
   example_nested %>%
-  pmap(fit_step, outcome = "hbp", predictors = "baseage + hbp", filter_at_step = hbp == 0, id = example_ids)
+  pmap(fit_step, outcome = "hbp", predictors = "baseage", filter_at_step = hbp == 0, id = example_ids)
 
 #' The `act` covariate is of type 4 (borrowing terminology from `gformula.sas`),
 #' and `fit_step()` returns a list of models. The model in `.$zero` estimates
 #' whether `act` is non-zero and the model `.$nzero` estimates `act` given that
 #' it is non-zero. (We can change this structure/naming as needed.)
-example_nested$act <-
+example_nested$m_act <-
   example_nested %>%
   pmap(fit_step, outcome = "act", predictors = "baseage + hbp + act", cov_type = 4, id = example_ids)
 
-example_nested$dead <-
+example_nested$m_dead <-
   example_nested %>%
   pmap(fit_step, outcome = "dead", predictors = "baseage + hbp + act", id = example_ids)
 
-example_nested$dia <-
+example_nested$m_dia <-
   example_nested %>%
   pmap(fit_step, outcome = "dia", predictors = "baseage + hbp + act", id = example_ids, filter_at_step = dead == 0)
 
@@ -173,33 +174,98 @@ sample_bin <- function(p) {
   map_int(p, ~ sample(0:1, 1, prob = c(1 - .x, .x)))
 }
 
-# generate a large n which is representative of the population at baseline
-pop <- example1 %>%
+sample_model <- function(model, data) {
+  predict(model, newdata = data, type = "response") %>%
+    sample_bin()
+}
+
+sample_model_bilevel <- function(model, data) {
+  pred <- predict(model$zero, newdata = data, type = "response") %>%
+    sample_bin()
+
+  idx_non_zero <- which(pred > 0)
+
+  pred[idx_non_zero] <- predict(model$nzero, newdata = data[idx_non_zero, ]) +
+    rnorm(length(idx_non_zero), 0, sd(model$nzero$residuals))
+
+  pred[idx_non_zero] <- exp(pred[idx_non_zero])
+
+  pred
+}
+
+sim_next_step <- function(data, model, data_next, var, ..., type = "single") {
+  data_next[[var]] <- switch(
+    type,
+    bilevel = sample_model_bilevel(model, data),
+    sample_model(model, data)
+  )
+  data_next
+}
+
+initial_data <-
+  example1 %>%
   filter(time == 0) %>%
-  select(-contains("_l")) %>%
-  sample_n(size = 10000, replace = TRUE) %>%
-  rename(hbp_T00 = hbp, act_T00 = act)
-  # the rename not needed when we use the actual nested structure!
+  { .[complete.cases(.), ] } %>%
+  select(-contains("_l"), -censlost) %>%
+  sample_n(size = 1e4, replace = TRUE) %>%
+  mutate(id = row_number()) %>%
+  nest(data = -time)
 
+initial_data_new <-
+  initial_data %>%
+  mutate(data_next = map(data, ~ select(., id, baseage))) %>%
+  select(-data) %>%
+  expand(time = 0:5, data_next)
 
-pop <- pop %>%
-  # estimate hbp at time 1
-  mutate(hbp1 =
-           predict(example_nested$hbp[[1]], newdata = ., type = "response") %>%
-           sample_bin()
-         ) %>%
-  # estimate act at time 1
-  mutate(act1 =
-           predict(example_nested$act[[1]]$zero, newdata = ., type = "response") %>%
-           sample_bin()
-         ) %>%
-  # use the loglinear model when act1 > 0
-  mutate(act1 = ifelse(act1 > 0,
-                      predict(example_nested$act[[1]]$nzero, newdata = .) +
-                        rnorm(as.integer(tally(.)), 0, sd(example_nested$act[[1]]$nzero$residuals)) %>%
-                        exp(),
-                      act1))
-# sanity check
-ggplot(pop) + geom_point(aes(x = act_T00, y = act1))
+pop <-
+  crossing(time = 0:5) %>%
+  left_join(example_nested %>% select(-contains('data')), by = "time") %>%
+  left_join(initial_data, by = "time") %>%
+  left_join(initial_data_new, by = "time")
 
+for (idx_time in seq_along(pop$time)) {
+  if (idx_time == nrow(pop)) next
 
+  tstep <- pop$time[idx_time]
+
+  data_this <- pop$data[[idx_time]] %>%
+    append_time_suffix(tstep, exclude = c("id", "baseage"))
+
+  # hbp
+  pop$data_next[[idx_time]] <- sim_next_step(
+    data = data_this,
+    model = pop$m_hbp[[idx_time]],
+    data_next = pop$data_next[[idx_time]],
+    var = "hbp"
+  )
+
+  # act
+  pop$data_next[[idx_time]] <- sim_next_step(
+    data = data_this,
+    model = pop$m_act[[idx_time]],
+    data_next = pop$data_next[[idx_time]],
+    var = "act",
+    type = "bilevel"
+  )
+
+  # dead
+  pop$data_next[[idx_time]] <- sim_next_step(
+    data = data_this,
+    model = pop$m_dead[[idx_time]],
+    data_next = pop$data_next[[idx_time]],
+    var = "dead"
+  )
+
+  # dia
+  pop$data_next[[idx_time]] <- sim_next_step(
+    data = data_this,
+    model = pop$m_dia[[idx_time]],
+    data_next = pop$data_next[[idx_time]],
+    var = "dia"
+  )
+
+  pop$data_next[[idx_time]][pop$data_next[[idx_time]]$dead == 1L, 'dia'] <- 0L
+
+  # done move data_next to next row of data
+  pop$data[[idx_time + 1]] <- pop$data_next[[idx_time]]
+}
