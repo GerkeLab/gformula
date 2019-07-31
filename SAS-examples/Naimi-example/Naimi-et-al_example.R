@@ -74,3 +74,26 @@ y_fit <- lm(y_2 ~ a_0 + z_1 + a_1 + a_0*a_1,
 # from supplement:
 # 87.2466 + 24.9699*a1 + 32.5502*z1 + 17.9893*a0 + 0.0541*a1*a0
 coef(y_fit)
+
+# MC simulation -----------------------------------------------------------
+
+# set up a function to get a vector of 0/1 from a vector of probabilities
+sample_bin <- function(p) {
+  map_int(p, ~ sample(0:1, 1, prob = c(1 - .x, .x)))
+}
+
+# sample 1000000 a0 entries to initialize the population
+intial_data <- sample...
+
+# simulate z1 values
+
+# simulate a1 values
+
+# simulate y values
+
+# match solutions for specific regimes from supplement and paper:
+# %gform(run=1,a0=a0,a1=a1,z1=z1);*natural course
+# %gform(run=2,a0=1,a1=1,z1=z1);*fully exposed;
+# %gform(run=3,a0=1,a1=0,z1=z1);*time zero only;
+# %gform(run=4,a0=0,a1=1,z1=z1);*time one only;
+# %gform(run=5,a0=0,a1=0,z1=z1);*fully unexposed;
