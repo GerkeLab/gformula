@@ -52,6 +52,21 @@ append_time_suffix.data.frame <- function(x,time=0,exclude=NULL) {
   x
 }
 
+select_cols_in_string <- function(data, string) {
+  cols_keep <- c()
+  for (col in colnames(data)) {
+    col_rgx <- paste0("\\b", regex_escape_dot(col), "\\b")
+    if (grepl(col_rgx, string)) {
+      cols_keep <- c(cols_keep, col)
+    }
+  }
+  data[, intersect(colnames(data), cols_keep)]
+}
+
+regex_escape_dot <- function(str) {
+  gsub("([.])", "\\\\.", str)
+}
+
 fit_step <- function(
   data,
   data_next,
@@ -75,8 +90,9 @@ fit_step <- function(
 
   for (col in names(data)) {
     if (col %in% id) next
-    outcome <- sub(col, append_time_suffix(col, time + 1), outcome, fixed = TRUE)
-    predictors <- gsub(col, append_time_suffix(col, time), predictors, fixed = TRUE)
+    col_rgx <- paste0("\\b", regex_escape_dot(col), "\\b")
+    outcome <- sub(col_rgx, append_time_suffix(col, time + 1), outcome)
+    predictors <- gsub(col_rgx, append_time_suffix(col, time), predictors)
   }
 
   filter_at_step <- rlang::enexpr(filter_at_step)
@@ -87,7 +103,9 @@ fit_step <- function(
   data <- data %>% append_time_suffix(time, exclude = id)
   data_next <- data_next %>% append_time_suffix(time + 1, exclude = id)
 
-  data <- left_join(data, data_next, by = id)
+  str_formula <- paste(outcome, predictors)
+  data <- left_join(data, data_next, by = id) %>%
+    select_cols_in_string(str_formula)
 
   if (cov_type == 2) {
     # note that this is covXotype = 2:

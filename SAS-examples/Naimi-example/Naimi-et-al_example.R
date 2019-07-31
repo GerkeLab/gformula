@@ -50,6 +50,12 @@ z1_fit <- glm(z_1 ~ a_0,
 # beta_0 = -0.4309 and beta_1 = 0.8735
 coef(z1_fit)
 
+## pull functions from example1.R
+# naimi %>%
+#   nest(data = -time) %>%
+#   filter(time == 0) %>%
+#   pmap(fit_step, outcome = "z", predictors = "a", id = "id")
+
 # a1 is caused by z1 (and *not* a0; we read this from the DAG. This
 # is an important option to consider: we don't always use all previously
 # measured variables to predict future variables)
