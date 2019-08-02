@@ -98,8 +98,10 @@ intial_data <- sample...
 # simulate y values
 
 # match solutions for specific regimes from supplement and paper:
-# %gform(run=1,a0=a0,a1=a1,z1=z1);*natural course
-# %gform(run=2,a0=1,a1=1,z1=z1);*fully exposed;
-# %gform(run=3,a0=1,a1=0,z1=z1);*time zero only;
-# %gform(run=4,a0=0,a1=1,z1=z1);*time one only;
-# %gform(run=5,a0=0,a1=0,z1=z1);*fully unexposed;
+# %gform(run=1,a0=a0,a1=a1,z1=z1);*natural course; y not shown
+# %gform(run=2,a0=1,a1=1,z1=z1);*fully exposed; y=150.0
+# %gform(run=3,a0=1,a1=0,z1=z1);*time zero only; y=125.0
+# %gform(run=4,a0=0,a1=1,z1=z1);*time one only; y=125.0
+# %gform(run=5,a0=0,a1=0,z1=z1);*fully unexposed; y=100.0
+
+
