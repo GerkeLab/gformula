@@ -1,0 +1,260 @@
+---
+title: "gformula model syntax"
+output: 
+  html_document:
+    theme: NULL
+    css: https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.min.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+## Syntax Ideas
+
+```{r}
+library(ggdag)
+
+dagify(
+  z_1 ~ a_0,
+  a_1 ~ z_1,
+  z_1 ~ u,
+  y ~ a_0 + z_1 + a_1 + u
+) %>% 
+  tidy_dagitty() %>% 
+  ggdag() + 
+  theme_dag()
+```
+
+The `ggdag` formula specification closely follows the model formulas from `Naimi-et-al_example.R`.
+
+```
+## Naimi models
+z_1 ~ a_0
+a_1 ~ z_1
+y_2 ~ a_0 + z_1 + a_1 + a_0 * a_1
+
+## or in my proposed formula syntax...
+
+z[[1]] ~ a[[0]]
+a ~ z
+y[1] ~ a[-1:0] + z + a[-1] * a[0]
+```
+
+Why not `y{1}`? 
+Because that's invalid in R's formula syntax 
+and we can accept bare formulas if we use `y[1]` instead.
+
+```{r, error = TRUE}
+y{1} ~ x
+```
+
+Because `x[1]` is valid R syntax, we can reliably capture it in the formula.
+
+```{r, error = TRUE}
+y[1] ~ x
+```
+
+
+## General syntax overview
+
+1. Single brackets indicate time lag relative to the current time step  
+   e.g. `x[1]` is $x_{t_{i + 1}} \;\forall\;t_i \in \lbrace i \colon 0, \dots, N-1 \rbrace$
+1. Double brackets indicate an absolute time step  
+   e.g. `x[[1]]` is $x_{t_1}$
+1. Un-decorated variables represent that variable at the current time step  
+   e.g.`x` is $x_{t_{i}} \;\forall\;t_i \in \lbrace i \colon 0, \dots, N-1 \rbrace$
+1. If a predictor or outcome is missing at any time step, the model isn't run
+
+There are a few ways to write the above example models, but they should be equivalent.
+For example, the `a ~ z` specifies that `a` is predicted by `z` at all time steps 
+(although this would only happen at $t_1$ because `z` is missing otherwise).
+
+The model `z[1] ~ a` specifies that 
+`a` at the current time step predicts `z` at the next time step for all time steps 
+(again in this example this only happens at $t_1$).
+
+Alternatively, 
+the model `z[[1]] ~ a[[0]]` specifes that `a` at $t_0$ predicts `z` at $t_1$, 
+where the time step is indexed absolutely from the inital time step of $t_0$.
+
+Finally, the syntax `a[-1:0]` would expand to `a[0] + a[1]`.
+And I suppose we'd want associativity as well so that 
+`a[-1:0] * b` would expand to `a[-1] * b + a * b` 
+(but this might be further down the road).
+
+## Mixing `[n]` and `[[m]]`
+
+```
+z[1] ~ x[[0]] + y
+```
+
+for $t \in \lbrace 0, 1, 2 \rbrace$ would result in the models
+
+```
+z[[1]] ~ x[[0]] + y[[0]]
+z[[2]] ~ x[[0]] + y[[2]]
+```
+
+## Current time step
+
+For models without `[[`, 
+the models are run at each time step where there are enough leads or lags to fill out the model.
+If there are observations at three time steps (`0, 1, 2`), then the model
+
+```
+y[1] ~ x + y[-1]
+```
+
+will only be run at time `t = 1`.
+
+For models with absolute time values, 
+what time step should be considered the current time step?
+I think that $t_{\text{outcome}}$ makes the most sense, 
+so the *current time step* for the following model would be considered `t = 1`.
+
+```
+y[[2]] ~ x[[0]]
+```
+
+## Constraints on time indexes
+
+$t_{\text{outcome}} \geq \max \left( t_{\text{predictors}} \right)$
+
+Models are run from $t_0$ to $t_k$ where $k$ is the maximum value of the index of the *current time step* 
+where at least one model is specified given the input data.
+In our running example,
+
+```
+y[1] ~ a[-1:0] + z + a[-1] * a[0]
+```
+
+is only fully specifed at the *current time step* with index $i \geq 1$.
+In other words, at $t_0$ we don't have enough observations for the lagged `a` variable.
+At $t_1$ we have data from $t_0$ and $t_1$ to complete the RHS of the formula 
+and we have data from $t_{1 + 1} = t_2$ to complete the LHS so that we can fit the model.
+
+## From model to MCMC
+
+A problem with relying on missing values at a given time step to inform decisions about model fitting 
+is that this information won't be available to the MCMC step.
+
+Suppose $Z$ is only measured at $t = 1$ and influences $A$ at $t = 1$,
+but $A$ was measured at $t = \lbrace 0, 1, 2, 3, \dots \rbrace$.
+During model building the model `a ~ z` would be fit for $t = 1$ only, 
+given $z$ will contain missing values for all other time steps.
+But during the simulation phase, a $z$ at time $t = 2$ would be generated and 
+the `a ~ z` model would indicate that `a` should continue to be modelled by `z`.
+
+Instead, we would need to specify the model with absolute time references, i.e.
+
+```
+z[[1]] ~ a[[0]]
+a[[1]] ~ z[[1]]
+a[1] ~ a
+```
+
+## Specifying multiple models
+
+The `ggdag::dagify()` syntax is nice in that it lets you specify several models at once, 
+
+```{r eval=FALSE}
+dagify(
+  z_1 ~ a_0,
+  a_1 ~ z_1,
+  z_1 ~ u,
+  y ~ a_0 + z_1 + a_1 + u
+)
+```
+
+but we quickly run into the issue 
+that the user needs to have more control over 
+the specification of each model and the data that each model accepts.
+
+Each model specification is also attached to several other key pieces of information:
+
+1. The model function, e.g. `glm()` or `lm()`
+1. Arguments to the model function, e.g. `family = "binomial"`
+1. An expression used to filter data at the current time (or the outcome tim) step, 
+   e.g. `value > 0`. The data from the current time step
+1. A "callback" function that takes a model created from this process and generates new data
+
+We may be able to abstract key portions of this specification 
+(for example, using "logistic" as a keyword for `glm(..., family = "binomial")`) 
+but the user may want to specify highly specific models at each step and we can definitely allow this.
+
+The final item in the above list 
+would allow the user to specify complex data-generating procedures, 
+and we could also provide a few defaults functions (for example for bi-level models).
+
+The syntax for this function would look like this (using the Naimi example).
+
+```{r eval=FALSE}
+gformula() %>% 
+  model_spec(
+    model = z[1] ~ a, 
+    model_type = "logistic"
+  ) %>% 
+  model_spec(
+    model = a ~ z,
+    model_type = "logistic"
+  ) %>% 
+  model_spec(
+    model = y[1] ~ a[-1:0] + z + a[-1] * a,
+    model_type = "linear"
+  )
+```
+
+And the function signature for `model_spec()` is along these lines
+
+```{r eval=FALSE}
+model_spec <- function(
+  .gformula = gformula(),
+  model,
+  model_type = "logistic",
+  model_args = NULL,
+  generator = NULL
+) {
+  # set defaults for model_args, e.g.
+  if (is.null(model_args) && model_type %in% defined_model_types) {
+    model_args <- switch(
+      model_type, 
+      "logistic" = list(family = "binomial")
+    )
+  }
+  
+  # set default data generator
+  if (is.null(generator)) {
+    generator <- switch(
+      model_type,
+      "logistic" = gformula::generator_logistic(model),
+      "linear"   = gformula::generator_linear(model),
+      "bilevel"  = gformula::generator_bilevel(model)
+    )
+  } else {
+    # otherwise generator is user supplied function that takes
+    # data and a model object and returns output values for 
+    # this models outcome. {gformula} would handle providing a flat
+    # table at this time step, where we'd use common syntax to track time
+    # steps, e.g. y[1] ~ x would hand off data with columns y___01, x___00
+    # (which looks crazy but tries to avoid name clashes). Absolute times
+    # would, e.g. y[[1]] ~ x[[0]] would be y___T01, x___T00.
+    stopifnot(is.function(generator))
+  }
+  
+  # Add the model specs to the gformula object and return
+  .gformula
+}
+```
+
+## Consistency Requirements for MCMC Step
+
+What checks should we perform ahead of time to ensure 
+that there are enough models to complete the MCMC step?
+If we removed `a[[1]] ~ z[[1]]` ($a_{t_1} \sim z_{t_1}$) from the example mode,
+we won't know how to generate data for $a_{t_1}$ 
+and therefore won't be able to push data from $t_0$ through to find $y_{t_2}$.
+
+Do we always need bootstrapped data from $t_0$ only, 
+or are there cases where we would need bootstrapped data 
+from several time steps before the data simulation kicks in?
